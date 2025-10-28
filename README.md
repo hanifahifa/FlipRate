@@ -1,80 +1,85 @@
-# 💱 FlipRate – Aplikasi Pemantau & Konversi Kurs Dunia
+💱 FlipRate – Aplikasi Pemantau & Konversi Kurs Dunia
 
-Pantau nilai tukar, analisis tren, dan konversi mata uang real-time dalam satu aplikasi.
+FlipRate adalah aplikasi mobile berbasis Flutter yang berfungsi untuk memantau nilai tukar mata uang, melihat riwayat aktivitas konversi, serta menyimpan mata uang favorit agar pengguna dapat melakukan analisis dan perbandingan secara lebih cepat.
+Aplikasi ini dirancang dengan tampilan modern, minimalis, dan fokus pada kenyamanan pengguna, sehingga cocok digunakan oleh siapa saja yang ingin memantau perubahan kurs secara real-time.
 
----
+🧩 Fitur Utama
 
-## 🌿 Deskripsi Singkat
+🔹 Dashboard (Home Page)
+Menampilkan daftar kurs terkini antar berbagai mata uang dunia lengkap dengan simbol dan bendera negara.
 
-**FlipRate** adalah aplikasi mobile berbasis **Flutter** yang berfungsi untuk memantau kurs mata uang dunia, menampilkan tren perubahan kurs, serta menghitung konversi antar mata uang.  
-Aplikasi ini mengusung desain **modern berwarna hijau** untuk menggambarkan kesan finansial, stabilitas, dan kemudahan penggunaan.
+🔹 Activity Page
+Mencatat seluruh aktivitas konversi mata uang pengguna dalam tampilan list dinamis (menggunakan ListView.builder).
 
----
+🔹 Favorite Page
+Menampilkan mata uang yang telah ditandai sebagai favorit untuk akses cepat.
 
-## 🧩 Tahapan Pengerjaan
+🔹 Profile Page
+Menampilkan informasi pengguna dengan tampilan bersih dan warna lembut.
 
-| Tahap | Fokus | Data |
-|:------|:------|:------|
-| 🧩 **UTS** | Desain UI, layout, navigasi, dan data dummy JSON | Lokal (JSON) |
-| 🚀 **UAS (Mendatang)** | Integrasi API real-time (Frankfurter API) & fitur interaktif | API Online |
+🔹 Bottom Navigation Bar (Navbar)
+Navigasi utama aplikasi yang berisi empat menu utama (Dashboard, Activity, Favorite, Profile) dan tetap mengambang saat halaman digulir.
 
----
+🏗️ Arsitektur & Teknologi
 
-## 📱 Struktur Halaman Utama
+FlipRate dibangun menggunakan arsitektur modular Flutter dengan pendekatan pemisahan komponen berdasarkan fungsi, agar mudah dikembangkan dan dikelola.
 
-| No | Halaman | Status | Tujuan Singkat |
-|:--:|:--|:--:|:--|
-| 1 | **Splash / Intro** | 🧩 | Pembuka & animasi logo |
-| 2 | **Dashboard / Home** | 🧩 → 🚀 | Ringkasan kurs & insight |
-| 3 | **Exchange List** | 🧩 → 🚀 | Daftar kurs lengkap + pencarian |
-| 4 | **Analytic Page** | 🧩 → 🚀 | Grafik perubahan kurs |
-| 5 | **Converter Page** | 🚀 | Menghitung konversi mata uang |
-| 6 | **Favorites Page** | 🚀 | Menyimpan kurs favorit |
-| 7 | **Profile Page** | 🧩 | Info pengguna & tentang aplikasi |
+Struktur Folder Utama:
 
----
+lib/
+ ├── pages/
+ │   ├── dashboard_page.dart
+ │   ├── activity_page.dart
+ │   ├── favorite_page.dart
+ │   └── profile_page.dart
+ ├── widgets/
+ │   └── navbar.dart
+ └── main.dart
 
-## 💚 Detail Tiap Halaman
 
-### 🧩 1️⃣ Splash / Intro Page
-- **Tujuan:** Memberi kesan profesional di awal.
-- **Isi:**  
-  - Logo FlipRate + animasi loading  
-  - Teks: “Menyiapkan data keuanganmu 💹”  
-  - Setelah 3 detik → otomatis ke Dashboard  
-- **Inovatif:** Animasi logo berputar + slogan muncul bertahap.
+Teknologi dan Package yang Digunakan:
 
----
+Flutter SDK (stable)
 
-### 🧩 / 🚀 2️⃣ Dashboard / Home Page
-- **Fungsi:** Menampilkan ringkasan kurs & insight cepat.  
-- **UTS (Dummy):** 4 kurs utama (USD, EUR, JPY, GBP) dari file JSON.  
-- **UAS (Rencana):** Ambil data dari API [Frankfurter](https://api.frankfurter.app/latest).  
-- **Tampilan:**
-  - Kurs populer (EUR→IDR, USD→IDR, JPY→IDR)  
-  - Tanggal dan waktu update  
-  - Grafik mini (sparkline)  
-  - Insight otomatis: *“Nilai Rupiah melemah 0.3% dibanding kemarin 💸”*  
-- **Widget utama:** `ListView`, `Card`, `Row`, `Sparkline`, `BottomNavigationBar`  
-- **Inovatif:** Insight otomatis + grafik mini 3 hari terakhir.
+intl → Format tanggal dan angka
 
----
+google_fonts → Menggunakan font modern SF Pro
 
-### 🧩 / 🚀 3️⃣ Exchange List Page
-- **Fungsi:** Daftar lengkap kurs dari base EUR ke seluruh mata uang.  
-- **UTS:** Data dari `kurs_dummy.json`  
-- **UAS (Rencana):** API Real-time dari [Frankfurter](https://api.frankfurter.app/latest)  
-- **Isi:**  
-  - Search bar untuk pencarian mata uang  
-  - List kurs (scrollable)  
-  - Tombol “Tambah ke Favorit ⭐”  
-  - Tombol refresh 🔄  
-- **Widget utama:** `ListView.builder`, `SearchDelegate`, `Card`, `IconButton`  
-- **Inovatif:** Pencarian dinamis + aksi cepat favorit.
+Material Design 3 → Tampilan UI modern dan konsisten
 
----
+⚙️ Cara Menjalankan
 
-### 🧩 / 🚀 4️⃣ Analytic Page
-- **Fungsi:** Menampilkan perubahan kurs dari waktu ke waktu.  
-- **UTS:** Grafik dummy 7 hari terakhir.  
-- **UAS (Rencana):** Data historis dari API  
+Pastikan Flutter SDK sudah terpasang.
+
+Clone repositori:
+
+git clone https://github.com/NAMA_ANDA/fliprate.git
+
+
+Masuk ke direktori proyek:
+
+cd fliprate
+
+
+Ambil dependencies:
+
+flutter pub get
+
+
+Jalankan aplikasi:
+
+flutter run
+
+🚀 Roadmap & Pengembangan Selanjutnya
+
+🔄 Integrasi API: Menghubungkan aplikasi ke API kurs dunia (Frankfurter API).
+
+🧠 Penyimpanan Lokal: Menyimpan riwayat konversi dan favorit secara offline menggunakan SQLite.
+
+🔍 Fitur Pencarian: Menambahkan fungsi pencarian mata uang di halaman Dashboard.
+
+📊 Visualisasi Grafik: Menampilkan tren pergerakan kurs dalam bentuk chart interaktif.
+
+☁️ Sinkronisasi Cloud: Menyimpan data pengguna menggunakan Firebase agar dapat diakses lintas perangkat.
+
+📱 Tampilan Aplikasi:
