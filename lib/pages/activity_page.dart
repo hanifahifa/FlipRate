@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// ACTIVITY PAGE - FlipRate (Fixed Spacing)
+// ACTIVITY PAGE - FlipRate (SF Pro Edition)
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
@@ -92,90 +92,92 @@ class _ActivityPageState extends State<ActivityPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGreen,
-      appBar: AppBar(
-        title: const Text(
-          'My Activity',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Poppins',
-            fontSize: 20,
+    return DefaultTextStyle(
+      style: const TextStyle(fontFamily: 'SF Pro'),
+      child: Scaffold(
+        backgroundColor: lightGreen,
+        appBar: AppBar(
+          title: const Text(
+            'My Activity',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'SF Pro',
+              fontSize: 20,
+            ),
           ),
+          backgroundColor: primaryGreen,
+          elevation: 0,
+          centerTitle: false,
         ),
-        backgroundColor: primaryGreen,
-        elevation: 0,
-        centerTitle: false,
-      ),
-
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header dengan gradient
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primaryGreen, primaryGreen.withOpacity(0.8)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header gradient
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryGreen, primaryGreen.withOpacity(0.8)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontFamily: 'SF Pro',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInsightCard(),
+                  ],
                 ),
               ),
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInsightCard(),
-                ],
+
+              // Content area
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle(
+                      'Recently Viewed',
+                      Icons.remove_red_eye_outlined,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildRecentlyViewedSection(),
+                    const SizedBox(height: 20),
+
+                    _buildSectionTitle('Conversion History', Icons.history),
+                    const SizedBox(height: 12),
+                    _buildHistorySection(),
+                    const SizedBox(height: 20),
+
+                    _buildSectionTitle(
+                      'Currency Portfolio',
+                      Icons.account_balance_wallet,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPortfolioSection(context),
+                  ],
+                ),
               ),
-            ),
-
-            // Content area
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle(
-                    'Recently Viewed',
-                    Icons.remove_red_eye_outlined,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildRecentlyViewedSection(),
-                  const SizedBox(height: 20),
-
-                  _buildSectionTitle('Conversion History', Icons.history),
-                  const SizedBox(height: 12),
-                  _buildHistorySection(),
-
-                  const SizedBox(height: 20),
-
-                  _buildSectionTitle(
-                    'Currency Portfolio',
-                    Icons.account_balance_wallet,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPortfolioSection(context),
-
-                  // Padding bawah agar tidak tertutup navbar
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ---------- INSIGHT CARD ----------
   Widget _buildInsightCard() {
     return Container(
       decoration: BoxDecoration(
@@ -215,6 +217,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                     color: primaryGreen,
+                    fontFamily: 'SF Pro',
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -224,6 +227,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     fontSize: 13,
                     color: Colors.grey[700],
                     height: 1.4,
+                    fontFamily: 'SF Pro',
                   ),
                 ),
               ],
@@ -234,7 +238,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  // ---------- SECTION TITLE ----------
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
@@ -246,13 +249,13 @@ class _ActivityPageState extends State<ActivityPage> {
             fontWeight: FontWeight.bold,
             color: primaryGreen,
             fontSize: 17,
+            fontFamily: 'SF Pro',
           ),
         ),
       ],
     );
   }
 
-  // ---------- PORTFOLIO SECTION ----------
   Widget _buildPortfolioSection(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
@@ -276,7 +279,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  // ---------- HISTORY SECTION ----------
   Widget _buildHistorySection() {
     return Column(
       children: conversionHistory.asMap().entries.map((entry) {
@@ -307,11 +309,10 @@ class _ActivityPageState extends State<ActivityPage> {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      // Icon circle
                       Container(
                         width: 48,
                         height: 48,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: accentGreen,
                           shape: BoxShape.circle,
                         ),
@@ -322,13 +323,10 @@ class _ActivityPageState extends State<ActivityPage> {
                         ),
                       ),
                       const SizedBox(width: 14),
-
-                      // Content
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Currency pair
                             Row(
                               children: [
                                 Text(
@@ -337,6 +335,7 @@ class _ActivityPageState extends State<ActivityPage> {
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                     color: Colors.black87,
+                                    fontFamily: 'SF Pro',
                                   ),
                                 ),
                                 const Padding(
@@ -353,13 +352,12 @@ class _ActivityPageState extends State<ActivityPage> {
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                     color: primaryGreen,
+                                    fontFamily: 'SF Pro',
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
-
-                            // Time
                             Row(
                               children: [
                                 Icon(
@@ -373,6 +371,7 @@ class _ActivityPageState extends State<ActivityPage> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[600],
+                                    fontFamily: 'SF Pro',
                                   ),
                                 ),
                               ],
@@ -380,8 +379,6 @@ class _ActivityPageState extends State<ActivityPage> {
                           ],
                         ),
                       ),
-
-                      // Arrow icon
                       Icon(
                         Icons.chevron_right_rounded,
                         color: Colors.grey[400],
@@ -398,7 +395,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  // ---------- RECENTLY VIEWED SECTION ----------
   Widget _buildRecentlyViewedSection() {
     return SizedBox(
       height: 85,
@@ -410,7 +406,6 @@ class _ActivityPageState extends State<ActivityPage> {
           final pair = r['pair'] as String;
           final when = r['when'] as DateTime;
 
-          // dummy data rate dan bendera
           final info = {
             'JPY → IDR': {'rate': '≈ Rp115', 'flag': '🇯🇵'},
             'SGD → IDR': {'rate': '≈ Rp11.450', 'flag': '🇸🇬'},
@@ -447,14 +442,11 @@ class _ActivityPageState extends State<ActivityPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Bendera
                       Text(
                         item?['flag'] ?? '🌍',
                         style: const TextStyle(fontSize: 20),
                       ),
                       const SizedBox(width: 8),
-
-                      // Info kurs
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,6 +458,7 @@ class _ActivityPageState extends State<ActivityPage> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
+                                fontFamily: 'SF Pro',
                               ),
                             ),
                             Text(
@@ -473,6 +466,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.black87,
+                                fontFamily: 'SF Pro',
                               ),
                             ),
                             Row(
@@ -488,6 +482,7 @@ class _ActivityPageState extends State<ActivityPage> {
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.black54,
+                                    fontFamily: 'SF Pro',
                                   ),
                                 ),
                               ],
@@ -506,7 +501,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  // ---------- MINI PORTFOLIO CARD ----------
   Widget _miniPortfolioCard(
     String flag,
     String pair,
@@ -541,7 +535,10 @@ class _ActivityPageState extends State<ActivityPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
-                  child: Text(flag, style: const TextStyle(fontSize: 22)),
+                  child: Text(
+                    flag,
+                    style: const TextStyle(fontSize: 22, fontFamily: 'SF Pro'),
+                  ),
                 ),
               ),
               Container(
@@ -567,6 +564,7 @@ class _ActivityPageState extends State<ActivityPage> {
                         color: isUp ? Colors.green : Colors.red,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
+                        fontFamily: 'SF Pro',
                       ),
                     ),
                   ],
@@ -582,12 +580,17 @@ class _ActivityPageState extends State<ActivityPage> {
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
+                  fontFamily: 'SF Pro',
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 'Today',
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontFamily: 'SF Pro',
+                ),
               ),
             ],
           ),

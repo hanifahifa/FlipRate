@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// PROFILE PAGE - FlipRate (Simple & Clean Version)
+// PROFILE PAGE - FlipRate (SF Pro Version - Keep Original Colors)
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
@@ -15,7 +15,11 @@ class ProfilePage extends StatelessWidget {
         backgroundColor: const Color(0xFF2E7D32),
         title: const Text(
           'Profile',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontFamily: 'SF Pro',
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: Padding(
@@ -30,6 +34,7 @@ class ProfilePage extends StatelessWidget {
             const Text(
               'Ifa Dev',
               style: TextStyle(
+                fontFamily: 'SF Pro',
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF2E7D32),
@@ -38,7 +43,10 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 4),
             const Text(
               'ifa.dev@gmail.com',
-              style: TextStyle(color: Colors.black54),
+              style: TextStyle(
+                fontFamily: 'SF Pro',
+                color: Colors.black54,
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -47,8 +55,7 @@ class ProfilePage extends StatelessWidget {
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 3,
+              ),elevation: 3,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -57,9 +64,8 @@ class ProfilePage extends StatelessWidget {
                     Text(
                       'Tentang Aplikasi',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF2E7D32),
+                        fontFamily: 'SF Pro',fontWeight: FontWeight.bold,
+                        fontSize: 16,color: Color(0xFF2E7D32),
                       ),
                     ),
                     SizedBox(height: 8),
@@ -68,12 +74,16 @@ class ProfilePage extends StatelessWidget {
                       'yang dibuat menggunakan Flutter. Aplikasi ini menampilkan '
                       'nilai tukar, tren perubahan, serta fitur konversi dan favorit '
                       'untuk membantu pengguna memantau mata uang global dengan mudah.',
-                      style: TextStyle(fontSize: 14),
+                      style: TextStyle(
+                        fontFamily: 'SF Pro',fontSize: 14,
+                      ),
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Sumber data: Frankfurter API (https://www.frankfurter.app)',
-                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                      style: TextStyle(
+                        fontFamily: 'SF Pro',fontSize: 13,color: Colors.black54,
+                      ),
                     ),
                   ],
                 ),
@@ -95,23 +105,42 @@ class ProfilePage extends StatelessWidget {
                       Icons.feedback_outlined,
                       color: Color(0xFF2E7D32),
                     ),
-                    title: const Text('Kirim Feedback'),
+                    title: const Text(
+                      'Kirim Feedback',
+                      style: TextStyle(
+                        fontFamily: 'SF Pro',
+                      ),
+                    ),
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Fitur feedback belum tersedia.'),
+                          content: Text(
+                            'Fitur feedback belum tersedia.',
+                            style: TextStyle(fontFamily: 'SF Pro'),
+                          ),
                         ),
                       );
                     },
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.redAccent),
-                    title: const Text('Logout'),
+                    leading: const Icon(
+                      Icons.logout,
+                      color: Colors.redAccent,
+                    ),
+                    title: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        fontFamily: 'SF Pro',
+                      ),
+                    ),
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Logout berhasil (dummy).'),
+                          content: Text(
+                            'Logout berhasil (dummy).',
+                            style: TextStyle(fontFamily: 'SF Pro'),
+                          ),
                         ),
                       );
                     },
