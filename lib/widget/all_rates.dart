@@ -1,14 +1,13 @@
 // ------------------------------------------------------
-// ALL RATES WIDGET - FlipRate (Final + Detail Navigation)
+// ALL RATES WIDGET - FlipRate (Fixed Calculation)
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import '../pages/detail_rate_page.dart'; // ⬅️ tambahkan import ini
+import '../pages/detail_rate_page.dart';
 import '../utils/history_manager.dart';
-
 
 class AllRatesWidget extends StatefulWidget {
   const AllRatesWidget({super.key});
@@ -114,13 +113,15 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
         final list =
             rates.entries.where((e) => e.key.toUpperCase() != 'IDR').map((e) {
               final cur = e.key.toUpperCase();
-              final val = idrRate / (e.value as num).toDouble();
+              final curToUsd = (e.value as num).toDouble();
+              final curToIdr = idrRate / curToUsd;
+
               return {
                 'currency': cur,
                 'name': currencyNames[cur] ?? cur,
                 'flag': currencyFlags[cur] ?? '🏳️',
-                'rate': val,
-                'change': _calcChange(cur, val),
+                'rate': curToIdr,
+                'change': _calcChange(cur, curToIdr, idrRate),
               };
             }).toList()..sort(
               (a, b) =>
@@ -275,7 +276,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
             context,
             MaterialPageRoute(builder: (_) => DetailRatePage(rateData: r)),
           );
-         HistoryManager.addRecentlyViewed(r['currency'], 'IDR');
+          HistoryManager.addRecentlyViewed(r['currency'], 'IDR');
         },
         leading: Text(r['flag'], style: const TextStyle(fontSize: 28)),
         title: Text(
@@ -317,13 +318,29 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
 
   String _fmt(double n) => NumberFormat('#,###.##').format(n);
 
-  String _calcChange(String cur, double todayRate) {
-    if (yesterdayRates.isEmpty || !yesterdayRates.containsKey(cur))
+  // =====================================================
+  // CALC CHANGE - FIXED VERSION (SAMA DENGAN FAVORITE PAGE)
+  // =====================================================
+  String _calcChange(String cur, double todayCurToIdr, double todayUsdToIdr) {
+    if (yesterdayRates.isEmpty ||
+        !yesterdayRates.containsKey(cur) ||
+        !yesterdayRates.containsKey('IDR')) {
       return '0.00%';
-    final yesterday = yesterdayRates[cur]!;
-    final diff = todayRate - yesterday;
-    final percent = (diff / yesterday) * 100;
-    final sign = percent >= 0 ? '+' : '-';
-    return '$sign${percent.abs().toStringAsFixed(2)}%';
+    }
+
+    // Yesterday: 1 USD = yesterdayRates['IDR'] IDR
+    // Yesterday: 1 USD = yesterdayRates[cur] CUR
+    // Jadi: 1 CUR = yesterdayRates['IDR'] / yesterdayRates[cur] IDR
+
+    final yesterdayUsdToIdr = yesterdayRates['IDR']!;
+    final yesterdayUsdToCur = yesterdayRates[cur]!;
+    final yesterdayCurToIdr = yesterdayUsdToIdr / yesterdayUsdToCur;
+
+    // Hitung perubahan persen
+    final diff = todayCurToIdr - yesterdayCurToIdr;
+    final percent = (diff / yesterdayCurToIdr) * 100;
+
+    final sign = percent >= 0 ? '+' : '';
+    return '$sign${percent.toStringAsFixed(2)}%';
   }
 }

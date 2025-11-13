@@ -1,7 +1,7 @@
 // ------------------------------------------------------
 // ACTIVITY PAGE - FlipRate (SF Pro Edition)
 // (Realtime Exchange Rate via open.er-api.com)
-// dengan History Manager & Real Data
+// dengan History Manager & Real Data + See More
 // ------------------------------------------------------
 
 import 'dart:convert';
@@ -23,15 +23,13 @@ class _ActivityPageState extends State<ActivityPage> {
   static const Color lightGreen = Color(0xFFF1F8E9);
   static const Color accentGreen = Color(0xFFDDE8D4);
 
-  final List<Map<String, dynamic>> portfolio = [
-    {'pair': 'USD → IDR', 'change': 0.4, 'flag': '🇺🇸', 'isUp': true},
-    {'pair': 'EUR → IDR', 'change': -0.2, 'flag': '🇪🇺', 'isUp': false},
-    {'pair': 'SGD → IDR', 'change': 0.5, 'flag': '🇸🇬', 'isUp': true},
-  ];
-
   List<Map<String, dynamic>> conversionHistory = [];
   List<Map<String, dynamic>> recentlyViewed = [];
   bool isLoading = true;
+
+  // State untuk expand/collapse
+  bool showAllHistory = false;
+  bool showAllRecentlyViewed = false;
 
   @override
   void initState() {
@@ -204,73 +202,75 @@ class _ActivityPageState extends State<ActivityPage> {
             ? const Center(
                 child: CircularProgressIndicator(color: primaryGreen),
               )
-            : SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header gradient
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [primaryGreen, primaryGreen.withOpacity(0.8)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
+            : RefreshIndicator(
+                onRefresh: _loadAllData,
+                color: primaryGreen,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header gradient
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              primaryGreen,
+                              primaryGreen.withOpacity(0.8),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              DateFormat(
+                                'EEEE, dd MMMM yyyy',
+                              ).format(DateTime.now()),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontFamily: 'SF Pro',
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInsightCard(),
+                          ],
                         ),
                       ),
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            DateFormat(
-                              'EEEE, dd MMMM yyyy',
-                            ).format(DateTime.now()),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontFamily: 'SF Pro',
+
+                      // Content area
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionTitle(
+                              'Recently Viewed',
+                              Icons.remove_red_eye_outlined,
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildInsightCard(),
-                        ],
+                            const SizedBox(height: 12),
+                            _buildRecentlyViewedSection(),
+                            const SizedBox(height: 20),
+
+                            _buildSectionTitle(
+                              'Conversion History',
+                              Icons.history,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildHistorySection(),
+
+                            // PADDING BOTTOM agar tidak tertutup navbar
+                            const SizedBox(height: 100),
+                          ],
+                        ),
                       ),
-                    ),
-
-                    // Content area
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSectionTitle(
-                            'Recently Viewed',
-                            Icons.remove_red_eye_outlined,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildRecentlyViewedSection(),
-                          const SizedBox(height: 20),
-
-                          _buildSectionTitle(
-                            'Conversion History',
-                            Icons.history,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildHistorySection(),
-                          const SizedBox(height: 20),
-
-                          _buildSectionTitle(
-                            'Currency Portfolio',
-                            Icons.account_balance_wallet,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildPortfolioSection(context),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
       ),
@@ -355,29 +355,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  Widget _buildPortfolioSection(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.5,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: portfolio.length,
-      itemBuilder: (context, index) {
-        final p = portfolio[index];
-        return _miniPortfolioCard(
-          p['flag'] as String,
-          p['pair'] as String,
-          (p['change'] as num).toDouble(),
-          p['isUp'] as bool,
-        );
-      },
-    );
-  }
-
   Widget _buildHistorySection() {
     if (conversionHistory.isEmpty) {
       return Container(
@@ -405,118 +382,176 @@ class _ActivityPageState extends State<ActivityPage> {
       );
     }
 
-    return Column(
-      children: conversionHistory.asMap().entries.map((entry) {
-        final index = entry.key;
-        final c = entry.value;
-        final isLast = index == conversionHistory.length - 1;
+    // Tampilkan 4 item pertama atau semua jika showAllHistory true
+    final displayedHistory = showAllHistory
+        ? conversionHistory
+        : conversionHistory.take(4).toList();
 
-        return Padding(
-          padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
+    return Column(
+      children: [
+        ...displayedHistory.asMap().entries.map((entry) {
+          final index = entry.key;
+          final c = entry.value;
+          final isLast = index == displayedHistory.length - 1;
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                onTap: () {},
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          color: accentGreen,
-                          shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {},
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: const BoxDecoration(
+                            color: accentGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.swap_horiz_rounded,
+                            color: primaryGreen,
+                            size: 24,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.swap_horiz_rounded,
-                          color: primaryGreen,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    '${c['fromAmount']} ${c['fromCode']}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: Colors.black87,
+                                      fontFamily: 'SF Pro',
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    child: Icon(
+                                      Icons.arrow_forward,
+                                      size: 14,
+                                      color: primaryGreen,
+                                    ),
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      '${NumberFormat('#,###', 'id_ID').format(c['toAmount'])} ${c['toCode']}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: primaryGreen,
+                                        fontFamily: 'SF Pro',
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.access_time_rounded,
+                                    size: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    relativeTime(c['time'] as DateTime),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontFamily: 'SF Pro',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.grey[400],
                           size: 24,
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  '${c['fromAmount']} ${c['fromCode']}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: Colors.black87,
-                                    fontFamily: 'SF Pro',
-                                  ),
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 6),
-                                  child: Icon(
-                                    Icons.arrow_forward,
-                                    size: 14,
-                                    color: primaryGreen,
-                                  ),
-                                ),
-                                Text(
-                                  '${NumberFormat('#,###', 'id_ID').format(c['toAmount'])} ${c['toCode']}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: primaryGreen,
-                                    fontFamily: 'SF Pro',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.access_time_rounded,
-                                  size: 12,
-                                  color: Colors.grey[500],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  relativeTime(c['time'] as DateTime),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontFamily: 'SF Pro',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: Colors.grey[400],
-                        size: 24,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+          );
+        }),
+
+        // See More Button untuk History
+        if (conversionHistory.length > 4)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  showAllHistory = !showAllHistory;
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: primaryGreen.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      showAllHistory
+                          ? 'Show Less'
+                          : 'See More (${conversionHistory.length - 4}+)',
+                      style: const TextStyle(
+                        color: primaryGreen,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontFamily: 'SF Pro',
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      showAllHistory
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      color: primaryGreen,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 
@@ -542,200 +577,210 @@ class _ActivityPageState extends State<ActivityPage> {
       );
     }
 
-    return SizedBox(
-      height: 85,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: recentlyViewed.length,
-        itemBuilder: (context, index) {
-          final r = recentlyViewed[index];
-          final pair = r['pair'] as String;
-          final when = r['when'] as DateTime;
-          final from = r['from'] as String;
-          final rate = r['rate'] as double;
+    // Tampilkan 3 item pertama atau semua jika showAllRecentlyViewed true
+    final displayedViewed = showAllRecentlyViewed
+        ? recentlyViewed
+        : recentlyViewed.take(3).toList();
 
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index < recentlyViewed.length - 1 ? 10 : 0,
-            ),
-            child: Container(
-              width: 150,
-              decoration: BoxDecoration(
-                color: const Color(0xFFB9DDB5),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.green.withOpacity(0.15),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () {},
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        _getFlag(from),
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              pair,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                                fontFamily: 'SF Pro',
-                              ),
-                            ),
-                            Text(
-                              rate > 0 ? _formatRate(rate) : 'Loading...',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black87,
-                                fontFamily: 'SF Pro',
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.schedule_rounded,
-                                  size: 11,
-                                  color: Colors.black54,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  relativeTime(when),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                    fontFamily: 'SF Pro',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+    return Column(
+      children: [
+        SizedBox(
+          height: 85,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount:
+                displayedViewed.length +
+                (recentlyViewed.length > 3 && !showAllRecentlyViewed ? 1 : 0),
+            itemBuilder: (context, index) {
+              // Show "See More" button as last item jika ada lebih dari 3
+              if (!showAllRecentlyViewed &&
+                  recentlyViewed.length > 3 &&
+                  index == 3) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 0),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        showAllRecentlyViewed = true;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: primaryGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: primaryGreen.withOpacity(0.3),
                         ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.arrow_forward,
+                            color: primaryGreen,
+                            size: 24,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'See\nMore',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: primaryGreen,
+                              fontFamily: 'SF Pro',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final r = displayedViewed[index];
+              final pair = r['pair'] as String;
+              final when = r['when'] as DateTime;
+              final from = r['from'] as String;
+              final rate = r['rate'] as double;
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  right:
+                      index < displayedViewed.length - 1 ||
+                          (!showAllRecentlyViewed && recentlyViewed.length > 3)
+                      ? 10
+                      : 0,
+                ),
+                child: Container(
+                  width: 150,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFB9DDB5),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withOpacity(0.15),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _miniPortfolioCard(
-    String flag,
-    String pair,
-    double change,
-    bool isUp,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: accentGreen,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    flag,
-                    style: const TextStyle(fontSize: 22, fontFamily: 'SF Pro'),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {},
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            _getFlag(from),
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  pair,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                    fontFamily: 'SF Pro',
+                                  ),
+                                ),
+                                Text(
+                                  rate > 0 ? _formatRate(rate) : 'Loading...',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black87,
+                                    fontFamily: 'SF Pro',
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.schedule_rounded,
+                                      size: 11,
+                                      color: Colors.black54,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        relativeTime(when),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black54,
+                                          fontFamily: 'SF Pro',
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              );
+            },
+          ),
+        ),
+
+        // Show Less Button untuk Recently Viewed (jika sudah expand)
+        if (showAllRecentlyViewed && recentlyViewed.length > 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  showAllRecentlyViewed = false;
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: isUp
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: primaryGreen.withOpacity(0.3)),
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      isUp ? Icons.arrow_upward : Icons.arrow_downward,
-                      size: 12,
-                      color: isUp ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${change.abs().toStringAsFixed(1)}%',
+                    const Text(
+                      'Show Less',
                       style: TextStyle(
-                        color: isUp ? Colors.green : Colors.red,
-                        fontSize: 11,
+                        color: primaryGreen,
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                         fontFamily: 'SF Pro',
                       ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.keyboard_arrow_up,
+                      color: primaryGreen,
+                      size: 20,
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                pair,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  fontFamily: 'SF Pro',
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Today',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
-                  fontFamily: 'SF Pro',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+      ],
     );
   }
 }

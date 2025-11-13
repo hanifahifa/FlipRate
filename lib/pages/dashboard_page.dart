@@ -1,6 +1,6 @@
 // ------------------------------------------------------
-// DASHBOARD PAGE - FlipRate (SF Pro Version)
-// DENGAN API REAL-TIME + HISTORICAL DATA UNTUK CHART
+// DASHBOARD PAGE - FlipRate (Improved Chart Version)
+// DENGAN GRAFIK 3 HARI YANG LEBIH NYAMAN DILIHAT
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
@@ -10,6 +10,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../widget/all_rates.dart';
 import '../widget/convert.dart';
+import '../widget/analysis.dart';
+import '../widget/notification.dart'; // ← TAMBAHKAN INI
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -21,15 +23,15 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   List<Map<String, dynamic>> popularRates = [];
   List<FlSpot> chartData = [];
+  List<String> chartDates = []; // ← TAMBAH: untuk label tanggal
   bool isLoading = true;
   bool isChartLoading = true;
   String errorMessage = '';
   String chartErrorMessage = '';
+  int? touchedIndex; // ← TAMBAH: untuk tooltip
 
-  // Mata uang populer yang akan ditampilkan
   final List<String> popularCurrencies = ['USD', 'EUR', 'JPY', 'SGD'];
 
-  // Map untuk emoji flag mata uang
   final Map<String, String> currencyFlags = {
     'USD': '🇺🇸',
     'EUR': '🇪🇺',
@@ -53,7 +55,6 @@ class _DashboardPageState extends State<DashboardPage> {
       errorMessage = '';
     });
 
-    // List API backup (akan dicoba satu per satu)
     final List<String> apiUrls = [
       'https://api.exchangerate-api.com/v4/latest/USD',
       'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
@@ -71,41 +72,33 @@ class _DashboardPageState extends State<DashboardPage> {
           Map<String, dynamic> rates;
           double idrRate;
 
-          // Parse berbeda untuk setiap API
           if (i == 0) {
-            // exchangerate-api.com format
             rates = data['rates'] as Map<String, dynamic>;
             idrRate = (rates['IDR'] as num).toDouble();
           } else if (i == 1) {
-            // fawazahmed0 format
             rates = data['usd'] as Map<String, dynamic>;
             idrRate = (rates['idr'] as num).toDouble();
           } else {
-            // frankfurter.app format
             rates = data['rates'] as Map<String, dynamic>;
             idrRate = (rates['IDR'] as num).toDouble();
           }
 
           List<Map<String, dynamic>> ratesList = [];
 
-          // Ambil hanya mata uang populer
           for (String currency in popularCurrencies) {
             final currencyLower = currency.toLowerCase();
             final rate = rates[currency] ?? rates[currencyLower];
 
             if (rate != null) {
-              // Konversi ke IDR
               final double valueInIdr = idrRate / (rate as num).toDouble();
+              final changeData = _generateRealChange(currency);
 
-              final changeData = _generateRealChange(
-                currency,
-              ); // ← TAMBAH BARIS INI
               ratesList.add({
                 'pair': '$currency → IDR',
                 'currency': currency,
                 'value': valueInIdr,
-                'change': changeData['change'], // ← UBAH JADI INI
-                'isUpValue': changeData['isUp'], // ← TAMBAH FIELD BARU
+                'change': changeData['change'],
+                'isUpValue': changeData['isUp'],
                 'flag': currencyFlags[currency] ?? '🏳️',
               });
             }
@@ -116,11 +109,10 @@ class _DashboardPageState extends State<DashboardPage> {
             isLoading = false;
           });
 
-          return; // Sukses, keluar dari loop
+          return;
         }
       } catch (e) {
         if (i == apiUrls.length - 1) {
-          // Semua API gagal
           setState(() {
             isLoading = false;
             errorMessage = 'Unable to fetch rates. Please try again.';
@@ -132,7 +124,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // FUNGSI FETCH HISTORICAL DATA UNTUK CHART
+  // FUNGSI FETCH HISTORICAL DATA (3 HARI)
   // ============================================
   Future<void> fetchHistoricalData() async {
     setState(() {
@@ -141,7 +133,6 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     try {
-      // Menggunakan Frankfurter API untuk data historis (3 hari saja untuk lebih cepat)
       final now = DateTime.now();
       final threeDaysAgo = now.subtract(const Duration(days: 3));
 
@@ -153,63 +144,62 @@ class _DashboardPageState extends State<DashboardPage> {
 
       final response = await http
           .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final rates = data['rates'] as Map<String, dynamic>;
 
         List<FlSpot> spots = [];
+        List<String> dates = [];
         int index = 0;
 
-        // Sort dates
         final sortedDates = rates.keys.toList()..sort();
 
         for (String date in sortedDates) {
           final dayRates = rates[date] as Map<String, dynamic>;
           final idrRate = (dayRates['IDR'] as num).toDouble();
-          final idrToUsd = 1 / idrRate; // ubah arah jadi IDR → USD
-          spots.add(FlSpot(index.toDouble(), idrToUsd));
+
+          spots.add(FlSpot(index.toDouble(), idrRate));
+
+          // Format tanggal untuk label (contoh: "10 Nov")
+          final dateTime = DateTime.parse(date);
+          dates.add(DateFormat('d MMM').format(dateTime));
 
           index++;
         }
 
         setState(() {
           chartData = spots;
+          chartDates = dates;
           isChartLoading = false;
         });
       } else {
         throw Exception('Failed to load historical data');
       }
     } catch (e) {
-      // Fallback: gunakan data current rate dengan variasi
-      if (popularRates.isNotEmpty) {
-        final usdData = popularRates.firstWhere(
-          (rate) => rate['currency'] == 'USD',
-          orElse: () => {'value': 15500.0},
-        );
-        final currentRate = usdData['value'] as double;
-
-        setState(() {
-          chartData = [
-            FlSpot(0, currentRate - 40),
-            FlSpot(1, currentRate - 72),
-            FlSpot(2, currentRate),
-          ];
-          isChartLoading = false;
-          chartErrorMessage = 'Using estimated data';
-        });
-      } else {
-        setState(() {
-          isChartLoading = false;
-          chartErrorMessage = 'Unable to load chart data';
-        });
-      }
+      // Fallback dengan data estimasi
+      final now = DateTime.now();
+      setState(() {
+        chartData = [
+          FlSpot(0, 15800.0),
+          FlSpot(1, 15720.0),
+          FlSpot(2, 15650.0),
+          FlSpot(3, 15700.0),
+        ];
+        chartDates = [
+          DateFormat('d MMM').format(now.subtract(const Duration(days: 3))),
+          DateFormat('d MMM').format(now.subtract(const Duration(days: 2))),
+          DateFormat('d MMM').format(now.subtract(const Duration(days: 1))),
+          DateFormat('d MMM').format(now),
+        ];
+        isChartLoading = false;
+        chartErrorMessage = 'Using estimated data';
+      });
     }
   }
 
   Map<String, dynamic> _generateRealChange(String currency) {
-    // Simulasi perubahan berdasarkan data historis jika ada
     if (chartData.length >= 2 && currency == 'USD') {
       final yesterday = chartData[chartData.length - 2].y;
       final today = chartData.last.y;
@@ -222,7 +212,6 @@ class _DashboardPageState extends State<DashboardPage> {
       };
     }
 
-    // Untuk currency lain, gunakan random dengan logika yang sama
     final random = (DateTime.now().millisecond % 10) / 10;
     final isPositive = DateTime.now().second % 2 == 0;
     return {
@@ -256,21 +245,18 @@ class _DashboardPageState extends State<DashboardPage> {
 
     String direction;
     String emoji;
-    Color color;
 
     if (difference > 0) {
       direction = 'strengthened';
       emoji = '📈';
-      color = Colors.green.shade700;
     } else if (difference < 0) {
       direction = 'weakened';
       emoji = '📉';
-      color = Colors.red.shade700;
     } else {
-      return 'Rupiah remains stable against USD';
+      return '➡️ IDR remains stable over the past 3 days';
     }
 
-    return '$emoji Rupiah $direction ${percentageChange.abs().toStringAsFixed(2)}% (Rp${difference.abs().toStringAsFixed(0)})';
+    return '$emoji IDR has $direction by ${percentageChange.abs().toStringAsFixed(2)}% (Rp${difference.abs().toStringAsFixed(0)}) in 3 days';
   }
 
   Future<void> _refreshAll() async {
@@ -303,9 +289,21 @@ class _DashboardPageState extends State<DashboardPage> {
             letterSpacing: 0.5,
           ),
         ),
-        actions: const [
-          Icon(Icons.notifications_none, color: Colors.white),
-          SizedBox(width: 12),
+        actions: [
+          // GANTI BAGIAN INI ↓
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationPage(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+          // SAMPAI SINI ↑
         ],
       ),
       body: DefaultTextStyle(
@@ -378,7 +376,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(height: 16),
 
-              // Exchange Chart (DARI API HISTORICAL)
+              // Exchange Chart (IMPROVED)
               _chartCard(),
 
               const SizedBox(height: 16),
@@ -388,7 +386,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
               const SizedBox(height: 16),
 
-              // Popular Rates (DARI API)
+              // Popular Rates
               _popularRatesCard(),
 
               const SizedBox(height: 20),
@@ -406,8 +404,9 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ---------------- WIDGETS ----------------
-  //GRAFIK
+  // ============================================
+  // IMPROVED CHART WIDGET
+  // ============================================
   Widget _chartCard() {
     return Card(
       elevation: 4,
@@ -425,23 +424,47 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.show_chart, color: Color(0xFF2E7D32)),
-                SizedBox(width: 6),
-                Text(
-                  'Exchange Rate Movement (IDR → USD)',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Color(0xFF2E7D32),
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.show_chart, color: Color(0xFF2E7D32)),
+                    SizedBox(width: 6),
+                    Text(
+                      'IDR to USD (3 Days)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
                 ),
+                if (!isChartLoading && chartData.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Rp${_formatNumber(chartData.last.y)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             SizedBox(
-              height: 120,
+              height: 180, // ← DIPERBESAR untuk lebih nyaman
               child: isChartLoading
                   ? const Center(
                       child: CircularProgressIndicator(
@@ -471,46 +494,45 @@ class _DashboardPageState extends State<DashboardPage> {
                         ],
                       ),
                     )
-                  : LineChart(
-                      LineChartData(
-                        gridData: const FlGridData(show: false),
-                        titlesData: const FlTitlesData(show: false),
-                        borderData: FlBorderData(show: false),
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: chartData,
-                            isCurved: true,
-                            color: const Color(0xFF2E7D32),
-                            barWidth: 3,
-                            dotData: const FlDotData(show: false),
-                            belowBarData: BarAreaData(
-                              show: true,
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFF2E7D32).withOpacity(0.3),
-                                  Colors.transparent,
-                                ],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  : _buildImprovedChart(),
             ),
             const SizedBox(height: 12),
+            if (chartErrorMessage.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      size: 14,
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      chartErrorMessage,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
             Text(
               isChartLoading
                   ? 'Loading historical data...'
                   : chartData.isNotEmpty
                   ? _getChartInsight()
-                  : chartErrorMessage.isNotEmpty
-                  ? chartErrorMessage
                   : 'Chart data unavailable',
               style: TextStyle(
                 color: Colors.black87,
-                fontSize: 13.5,
+                fontSize: 13,
                 fontWeight: chartData.isNotEmpty
                     ? FontWeight.w500
                     : FontWeight.normal,
@@ -521,6 +543,190 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
+
+  // ============================================
+  // BUILD IMPROVED CHART
+  // ============================================
+  Widget _buildImprovedChart() {
+    // Cari min dan max untuk auto-scale
+    final minY = chartData.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+    final maxY = chartData.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+    final range = maxY - minY;
+    final padding = range * 0.1; // 10% padding
+
+    return LineChart(
+      LineChartData(
+        minY: minY - padding,
+        maxY: maxY + padding,
+
+        // Grid lines
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: (range > 0) ? range / 3 : null,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.2),
+              strokeWidth: 1,
+              dashArray: [5, 5],
+            );
+          },
+        ),
+
+        // Border
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1),
+            left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1),
+          ),
+        ),
+
+        // Titles (Labels)
+        titlesData: FlTitlesData(
+          show: true,
+
+          // Bottom titles (Tanggal)
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index >= 0 && index < chartDates.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      chartDates[index],
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+
+          // Left titles (Nilai)
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 60,
+              interval: range / 3,
+              getTitlesWidget: (value, meta) {
+                // Format dengan ribuan (contoh: 16,800)
+                final formatted = NumberFormat('#,###').format(value.round());
+                return Text(
+                  formatted,
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Hide top and right
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+
+        // Touch/Tooltip
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (touchedSpot) =>
+                const Color(0xFF2E7D32).withOpacity(0.9),
+            tooltipRoundedRadius: 8,
+            tooltipPadding: const EdgeInsets.all(8),
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                final index = spot.x.toInt();
+                final date = index < chartDates.length ? chartDates[index] : '';
+                return LineTooltipItem(
+                  '$date\nRp${_formatNumber(spot.y)}',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                );
+              }).toList();
+            },
+          ),
+          handleBuiltInTouches: true,
+          getTouchedSpotIndicator: (barData, spotIndexes) {
+            return spotIndexes.map((index) {
+              return TouchedSpotIndicatorData(
+                FlLine(color: const Color(0xFF2E7D32), strokeWidth: 2),
+                FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) {
+                    return FlDotCirclePainter(
+                      radius: 6,
+                      color: Colors.white,
+                      strokeWidth: 2,
+                      strokeColor: const Color(0xFF2E7D32),
+                    );
+                  },
+                ),
+              );
+            }).toList();
+          },
+        ),
+
+        // Line data
+        lineBarsData: [
+          LineChartBarData(
+            spots: chartData,
+            isCurved: true,
+            curveSmoothness: 0.35,
+            color: const Color(0xFF2E7D32),
+            barWidth: 3,
+            isStrokeCapRound: true,
+
+            // Dots on line
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 4,
+                  color: const Color(0xFF2E7D32),
+                  strokeWidth: 0,
+                );
+              },
+            ),
+
+            // Area below line
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF2E7D32).withOpacity(0.25),
+                  const Color(0xFF2E7D32).withOpacity(0.05),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------- OTHER WIDGETS ----------------
 
   Widget _quickAccessCard(BuildContext context) {
     return Card(
@@ -557,7 +763,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   );
                 }),
-                _quickButton(Icons.analytics_outlined, 'Analysis', () {}),
+                _quickButton(Icons.analytics_outlined, 'Analysis', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AnalysisPage(),
+                    ),
+                  );
+                }),
                 _quickButton(Icons.swap_horiz, 'Conversion', () {
                   Navigator.push(
                     context,
@@ -722,14 +935,12 @@ class _DashboardPageState extends State<DashboardPage> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Baris 654-656:
           Icon(
             isUp ? Icons.arrow_upward : Icons.arrow_downward,
             color: isUp ? Colors.green : Colors.red,
             size: 16,
           ),
-
-          // Baris 660-664:
+          const SizedBox(width: 4),
           Text(
             change,
             style: TextStyle(

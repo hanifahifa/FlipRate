@@ -1,10 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../utils/favorite_manager.dart';
 
-class DetailRatePage extends StatelessWidget {
+class DetailRatePage extends StatefulWidget {
   final Map<String, dynamic> rateData;
 
   const DetailRatePage({super.key, required this.rateData});
+
+  @override
+  State<DetailRatePage> createState() => _DetailRatePageState();
+}
+
+class _DetailRatePageState extends State<DetailRatePage> {
+  bool isFavorite = false;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    final currency = widget.rateData['currency'] ?? '';
+    final fav = await FavoriteManager.isFavorite(currency);
+    setState(() {
+      isFavorite = fav;
+      isLoading = false;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    final currency = widget.rateData['currency'] ?? '';
+    final success = await FavoriteManager.toggleFavorite(currency);
+    
+    if (success || await FavoriteManager.isFavorite(currency) != isFavorite) {
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isFavorite 
+              ? '✅ $currency ditambahkan ke favorit'
+              : '❌ $currency dihapus dari favorit',
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: isFavorite ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
 
   String getFlag(String code) {
     if (code.length < 2) return '';
@@ -16,11 +63,11 @@ class DetailRatePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currency = rateData['currency'] ?? 'Unknown';
-    final name = rateData['name'] ?? 'Currency';
-    final rate = rateData['rate'] ?? 0.0;
-    final change = rateData['change'] ?? '0.00%';
-    final flag = rateData['flag'] ?? getFlag(currency);
+    final currency = widget.rateData['currency'] ?? 'Unknown';
+    final name = widget.rateData['name'] ?? 'Currency';
+    final rate = widget.rateData['rate'] ?? 0.0;
+    final change = widget.rateData['change'] ?? '0.00%';
+    final flag = widget.rateData['flag'] ?? getFlag(currency);
     final isUp = change.toString().startsWith('+');
 
     return Scaffold(
@@ -40,6 +87,17 @@ class DetailRatePage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Tombol favorite di AppBar
+          if (!isLoading)
+            IconButton(
+              icon: Icon(
+                isFavorite ? Icons.star : Icons.star_border,
+                color: isFavorite ? Colors.amber : Colors.white,
+              ),
+              onPressed: _toggleFavorite,
+            ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -72,6 +130,8 @@ class DetailRatePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            
+            // Card Info
             Card(
               color: Colors.white,
               elevation: 3,
@@ -100,6 +160,35 @@ class DetailRatePage extends StatelessWidget {
                 ),
               ),
             ),
+            
+            const SizedBox(height: 20),
+            
+            // Tombol Add/Remove Favorite (Alternatif di bawah card)
+            if (!isLoading)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _toggleFavorite,
+                  icon: Icon(
+                    isFavorite ? Icons.star : Icons.star_border,
+                  ),
+                  label: Text(
+                    isFavorite ? 'Hapus dari Favorit' : 'Tambah ke Favorit',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isFavorite ? Colors.grey[400] : const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
