@@ -33,6 +33,12 @@ dependencies:
   fl_chart: ^0.68.0
   intl: ^0.18.1
   google_fonts: ^6.2.1
+  http: ^1.1.0
+  shared_preferences: ^2.0.0
+  
+
+
+
 
 
 

@@ -1,9 +1,15 @@
 // ------------------------------------------------------
 // ACTIVITY PAGE - FlipRate (SF Pro Edition)
+// (Realtime Exchange Rate via open.er-api.com)
+// dengan History Manager & Real Data
 // ------------------------------------------------------
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+// Import HistoryManager (sesuaikan path-nya)
+import '../utils/history_manager.dart';
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key});
@@ -23,46 +29,100 @@ class _ActivityPageState extends State<ActivityPage> {
     {'pair': 'SGD → IDR', 'change': 0.5, 'flag': '🇸🇬', 'isUp': true},
   ];
 
-  final List<Map<String, dynamic>> conversionHistory = [
-    {
-      'fromAmount': 10,
-      'fromCode': 'USD',
-      'toAmount': 174320,
-      'toCode': 'IDR',
-      'time': DateTime.now().subtract(const Duration(hours: 1, minutes: 20)),
-    },
-    {
-      'fromAmount': 5,
-      'fromCode': 'EUR',
-      'toAmount': 87000,
-      'toCode': 'IDR',
-      'time': DateTime.now().subtract(const Duration(days: 1, hours: 2)),
-    },
-    {
-      'fromAmount': 200,
-      'fromCode': 'JPY',
-      'toAmount': 1740,
-      'toCode': 'IDR',
-      'time': DateTime.now().subtract(const Duration(days: 2, hours: 6)),
-    },
-  ];
+  List<Map<String, dynamic>> conversionHistory = [];
+  List<Map<String, dynamic>> recentlyViewed = [];
+  bool isLoading = true;
 
-  final List<Map<String, dynamic>> recentlyViewed = [
-    {
-      'pair': 'JPY → IDR',
-      'when': DateTime.now().subtract(const Duration(hours: 2)),
-    },
-    {
-      'pair': 'SGD → IDR',
-      'when': DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-    },
-    {
-      'pair': 'AUD → IDR',
-      'when': DateTime.now().subtract(const Duration(days: 3)),
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadAllData();
+  }
+
+  Future<double> fetchExchangeRate(String from, String to) async {
+    try {
+      final url = Uri.parse('https://open.er-api.com/v6/latest/$from');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['result'] == 'success' && data['rates'][to] != null) {
+          return (data['rates'][to] as num).toDouble();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching rate $from->$to: $e');
+    }
+    return 0.0;
+  }
+
+  Future<void> _loadAllData() async {
+    setState(() => isLoading = true);
+
+    // Load conversion history dari SharedPreferences
+    await _loadConversionHistory();
+
+    // Load recently viewed dari HistoryManager
+    await _loadRecentlyViewed();
+
+    setState(() => isLoading = false);
+  }
+
+  /// Mengambil conversion history dari HistoryManager
+  Future<void> _loadConversionHistory() async {
+    try {
+      final history = await HistoryManager.getConversionHistory();
+
+      setState(() {
+        conversionHistory = history;
+      });
+    } catch (e) {
+      debugPrint('Error loading conversion history: $e');
+      setState(() {
+        conversionHistory = [];
+      });
+    }
+  }
+
+  /// Mengambil recently viewed dari HistoryManager
+  Future<void> _loadRecentlyViewed() async {
+    try {
+      final viewed = await HistoryManager.getRecentlyViewed();
+      final List<Map<String, dynamic>> tempViewed = [];
+
+      for (final item in viewed) {
+        final from = item['from'] as String;
+        final to = item['to'] as String;
+        final dt = item['time'] as DateTime;
+
+        // Fetch rate untuk recently viewed
+        final rate = await fetchExchangeRate(from, to);
+
+        tempViewed.add({
+          'pair': '$from → $to',
+          'when': dt,
+          'from': from,
+          'to': to,
+          'rate': rate,
+        });
+      }
+
+      setState(() {
+        recentlyViewed = tempViewed;
+      });
+    } catch (e) {
+      debugPrint('Error loading recently viewed: $e');
+      setState(() {
+        recentlyViewed = [];
+      });
+    }
+  }
 
   String buildInsight() {
+    if (conversionHistory.isEmpty) {
+      return 'Start converting currencies to get personalized insights.';
+    }
+
     final usdCount = conversionHistory
         .where((c) => c['fromCode'] == 'USD')
         .length;
@@ -90,6 +150,36 @@ class _ActivityPageState extends State<ActivityPage> {
     return '${diff.inDays} days ago';
   }
 
+  String _getFlag(String currencyCode) {
+    final flags = {
+      'USD': '🇺🇸',
+      'EUR': '🇪🇺',
+      'JPY': '🇯🇵',
+      'GBP': '🇬🇧',
+      'AUD': '🇦🇺',
+      'CAD': '🇨🇦',
+      'CHF': '🇨🇭',
+      'CNY': '🇨🇳',
+      'SGD': '🇸🇬',
+      'IDR': '🇮🇩',
+      'MYR': '🇲🇾',
+      'THB': '🇹🇭',
+      'KRW': '🇰🇷',
+      'INR': '🇮🇳',
+    };
+    return flags[currencyCode.toUpperCase()] ?? '🌍';
+  }
+
+  String _formatRate(double rate) {
+    if (rate >= 1000) {
+      return '≈ Rp${NumberFormat('#,###', 'id_ID').format(rate.round())}';
+    } else if (rate >= 1) {
+      return '≈ Rp${rate.toStringAsFixed(0)}';
+    } else {
+      return '≈ Rp${rate.toStringAsFixed(2)}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTextStyle(
@@ -110,70 +200,79 @@ class _ActivityPageState extends State<ActivityPage> {
           elevation: 0,
           centerTitle: false,
         ),
-        body: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header gradient
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryGreen, primaryGreen.withOpacity(0.8)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        body: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: primaryGreen),
+              )
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontFamily: 'SF Pro',
+                    // Header gradient
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryGreen, primaryGreen.withOpacity(0.8)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            DateFormat(
+                              'EEEE, dd MMMM yyyy',
+                            ).format(DateTime.now()),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontFamily: 'SF Pro',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInsightCard(),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    _buildInsightCard(),
+
+                    // Content area
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle(
+                            'Recently Viewed',
+                            Icons.remove_red_eye_outlined,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildRecentlyViewedSection(),
+                          const SizedBox(height: 20),
+
+                          _buildSectionTitle(
+                            'Conversion History',
+                            Icons.history,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildHistorySection(),
+                          const SizedBox(height: 20),
+
+                          _buildSectionTitle(
+                            'Currency Portfolio',
+                            Icons.account_balance_wallet,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPortfolioSection(context),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-
-              // Content area
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(
-                      'Recently Viewed',
-                      Icons.remove_red_eye_outlined,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildRecentlyViewedSection(),
-                    const SizedBox(height: 20),
-
-                    _buildSectionTitle('Conversion History', Icons.history),
-                    const SizedBox(height: 12),
-                    _buildHistorySection(),
-                    const SizedBox(height: 20),
-
-                    _buildSectionTitle(
-                      'Currency Portfolio',
-                      Icons.account_balance_wallet,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPortfolioSection(context),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -280,6 +379,32 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   Widget _buildHistorySection() {
+    if (conversionHistory.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.history, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 12),
+              Text(
+                'No conversion history yet',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  fontFamily: 'SF Pro',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Column(
       children: conversionHistory.asMap().entries.map((entry) {
         final index = entry.key;
@@ -347,7 +472,7 @@ class _ActivityPageState extends State<ActivityPage> {
                                   ),
                                 ),
                                 Text(
-                                  '${c['toAmount']} ${c['toCode']}',
+                                  '${NumberFormat('#,###', 'id_ID').format(c['toAmount'])} ${c['toCode']}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
@@ -396,6 +521,27 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   Widget _buildRecentlyViewedSection() {
+    if (recentlyViewed.isEmpty) {
+      return Container(
+        height: 85,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(
+          child: Text(
+            'No recently viewed currencies',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 13,
+              fontFamily: 'SF Pro',
+            ),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 85,
       child: ListView.builder(
@@ -405,14 +551,8 @@ class _ActivityPageState extends State<ActivityPage> {
           final r = recentlyViewed[index];
           final pair = r['pair'] as String;
           final when = r['when'] as DateTime;
-
-          final info = {
-            'JPY → IDR': {'rate': '≈ Rp115', 'flag': '🇯🇵'},
-            'SGD → IDR': {'rate': '≈ Rp11.450', 'flag': '🇸🇬'},
-            'AUD → IDR': {'rate': '≈ Rp10.300', 'flag': '🇦🇺'},
-          };
-
-          final item = info[pair];
+          final from = r['from'] as String;
+          final rate = r['rate'] as double;
 
           return Padding(
             padding: EdgeInsets.only(
@@ -443,7 +583,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        item?['flag'] ?? '🌍',
+                        _getFlag(from),
                         style: const TextStyle(fontSize: 20),
                       ),
                       const SizedBox(width: 8),
@@ -462,7 +602,7 @@ class _ActivityPageState extends State<ActivityPage> {
                               ),
                             ),
                             Text(
-                              item?['rate'] ?? '',
+                              rate > 0 ? _formatRate(rate) : 'Loading...',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.black87,
