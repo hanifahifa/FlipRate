@@ -55,7 +55,7 @@ class _NotificationPageState extends State<NotificationPage> {
     await _loadPreviousRates();
     await _fetchCurrentRates();
     await _loadNotifications();
-    _generateNotifications();
+    await _generateNotifications();
   }
 
   // Load favorite currencies dari SharedPreferences
@@ -169,31 +169,47 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   // Generate notifications berdasarkan perubahan rate
-  void _generateNotifications() {
+  Future<void> _generateNotifications() async {
     final now = DateTime.now();
     List<Map<String, dynamic>> newNotifications = [];
 
     // Cek perubahan signifikan pada favorite currencies
     for (String currency in favoriteCurrencies) {
-      if (currentRates.containsKey(currency) &&
-          previousRates.containsKey(currency)) {
+      if (currentRates.containsKey(currency)) {
         final current = currentRates[currency]!;
-        final previous = previousRates[currency]!;
-        final changePercent = ((current - previous) / previous) * 100;
 
-        // Jika perubahan >= 1.5% (naik atau turun), buat notifikasi
-        if (changePercent.abs() >= 1.5) {
-          final isUp = changePercent > 0;
+        // Jika ada previous rate, bandingkan
+        if (previousRates.containsKey(currency)) {
+          final previous = previousRates[currency]!;
+          final changePercent = ((current - previous) / previous) * 100;
+
+          // Jika perubahan >= 1.5% (naik atau turun), buat notifikasi
+          if (changePercent.abs() >= 1.5) {
+            final isUp = changePercent > 0;
+            newNotifications.add({
+              'type': 'rate_alert',
+              'title': isUp
+                  ? '$currency/IDR Naik Signifikan!'
+                  : '$currency/IDR Turun Signifikan!',
+              'message':
+                  'Rate favorit Anda ${isUp ? 'naik' : 'turun'} ${changePercent.abs().toStringAsFixed(1)}% menjadi Rp${_formatNumber(current)}',
+              'time': now,
+              'icon': isUp ? Icons.trending_up : Icons.trending_down,
+              'color': isUp ? Colors.green : Colors.red,
+              'isRead': false,
+              'currency': currency,
+              'flag': currencyFlags[currency] ?? '🌍',
+            });
+          }
+        } else {
+          // First time: buat welcome notification
           newNotifications.add({
             'type': 'rate_alert',
-            'title': isUp
-                ? '$currency/IDR Naik Signifikan!'
-                : '$currency/IDR Turun Signifikan!',
-            'message':
-                'Rate favorit Anda ${isUp ? 'naik' : 'turun'} ${changePercent.abs().toStringAsFixed(1)}% menjadi Rp${_formatNumber(current)}',
+            'title': '$currency/IDR Rate Updated',
+            'message': 'Current rate: Rp${_formatNumber(current)}',
             'time': now,
-            'icon': isUp ? Icons.trending_up : Icons.trending_down,
-            'color': isUp ? Colors.green : Colors.red,
+            'icon': Icons.info_outline,
+            'color': Colors.blue,
             'isRead': false,
             'currency': currency,
             'flag': currencyFlags[currency] ?? '🌍',
@@ -203,7 +219,7 @@ class _NotificationPageState extends State<NotificationPage> {
     }
 
     // Tambahkan reminder jika user belum cek dalam 3 hari
-    final lastCheck = _getLastCheckTime();
+    final lastCheck = await _getLastCheckTime();
     if (lastCheck != null && now.difference(lastCheck).inDays >= 3) {
       newNotifications.add({
         'type': 'reminder',
@@ -220,19 +236,19 @@ class _NotificationPageState extends State<NotificationPage> {
       });
     }
 
-    // Daily summary reminder (pukul 8 pagi)
-    if (now.hour == 8 && !_hasDailySummaryToday()) {
+    // Tambahkan welcome notification jika belum pernah ada notifikasi
+    if (notifications.isEmpty && newNotifications.isEmpty) {
       newNotifications.add({
         'type': 'reminder',
-        'title': 'Daily Summary Ready',
+        'title': 'Welcome to FlipRate! 👋',
         'message':
-            'Lihat ringkasan pergerakan ${favoriteCurrencies.length} currency favorit Anda',
+            'You will receive notifications when your favorite currency rates change significantly.',
         'time': now,
-        'icon': Icons.summarize,
-        'color': Colors.blue,
+        'icon': Icons.info_outline,
+        'color': primaryGreen,
         'isRead': false,
         'currency': null,
-        'flag': '📊',
+        'flag': '🎉',
       });
     }
 
@@ -250,15 +266,13 @@ class _NotificationPageState extends State<NotificationPage> {
     _saveLastCheckTime();
   }
 
-  DateTime? _getLastCheckTime() {
+  Future<DateTime?> _getLastCheckTime() async {
     try {
-      final prefs = SharedPreferences.getInstance();
-      prefs.then((p) {
-        final lastCheck = p.getString('last_check_time');
-        if (lastCheck != null) {
-          return DateTime.parse(lastCheck);
-        }
-      });
+      final prefs = await SharedPreferences.getInstance();
+      final lastCheck = prefs.getString('last_check_time');
+      if (lastCheck != null) {
+        return DateTime.parse(lastCheck);
+      }
     } catch (e) {
       debugPrint('Error getting last check time: $e');
     }
@@ -275,18 +289,6 @@ class _NotificationPageState extends State<NotificationPage> {
     } catch (e) {
       debugPrint('Error saving last check time: $e');
     }
-  }
-
-  bool _hasDailySummaryToday() {
-    final today = DateTime.now();
-    return notifications.any(
-      (n) =>
-          n['type'] == 'reminder' &&
-          n['title'] == 'Daily Summary Ready' &&
-          (n['time'] as DateTime).day == today.day &&
-          (n['time'] as DateTime).month == today.month &&
-          (n['time'] as DateTime).year == today.year,
-    );
   }
 
   void _calculateUnreadCount() {
@@ -383,87 +385,29 @@ class _NotificationPageState extends State<NotificationPage> {
       child: Scaffold(
         backgroundColor: lightGreen,
         appBar: AppBar(
-          title: Row(
-            children: [
-              const Text(
-                'Notifications',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'SF Pro',
-                  fontSize: 20,
-                ),
-              ),
-              if (unreadCount > 0) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ],
+          title: const Text(
+            'Notifications',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'SF Pro',
+              fontSize: 20,
+            ),
           ),
           backgroundColor: primaryGreen,
           elevation: 0,
           actions: [
+            if (unreadCount > 0)
+              IconButton(
+                icon: const Icon(Icons.done_all, color: Colors.white),
+                tooltip: 'Mark all as read',
+                onPressed: _markAllAsRead,
+              ),
             if (notifications.isNotEmpty)
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                onSelected: (value) {
-                  if (value == 'mark_all') {
-                    _markAllAsRead();
-                  } else if (value == 'clear_all') {
-                    _clearAll();
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'mark_all',
-                    child: Row(
-                      children: [
-                        Icon(Icons.done_all, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Mark all as read',
-                          style: TextStyle(fontFamily: 'SF Pro'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'clear_all',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text(
-                          'Clear all',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontFamily: 'SF Pro',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.white),
+                tooltip: 'Clear all notifications',
+                onPressed: _clearAll,
               ),
           ],
         ),
@@ -472,19 +416,19 @@ class _NotificationPageState extends State<NotificationPage> {
                 child: CircularProgressIndicator(color: primaryGreen),
               )
             : notifications.isEmpty
-            ? _buildEmptyState()
-            : RefreshIndicator(
-                onRefresh: _initializeData,
-                color: primaryGreen,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: notifications.length,
-                  itemBuilder: (context, index) {
-                    final notif = notifications[index];
-                    return _buildNotificationCard(notif, index);
-                  },
-                ),
-              ),
+                ? _buildEmptyState()
+                : RefreshIndicator(
+                    onRefresh: _initializeData,
+                    color: primaryGreen,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: notifications.length,
+                      itemBuilder: (context, index) {
+                        final notif = notifications[index];
+                        return _buildNotificationCard(notif, index);
+                      },
+                    ),
+                  ),
       ),
     );
   }
@@ -609,7 +553,7 @@ class _NotificationPageState extends State<NotificationPage> {
                             Expanded(
                               child: Text(
                                 notif['title'] as String,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                   color: Colors.black87,
@@ -692,6 +636,73 @@ class _NotificationPageState extends State<NotificationPage> {
           ),
         ),
       ),
+    );
+  }
+
+  // Method untuk get unread count (dipakai di widget lain)
+  static Future<int> getUnreadCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notifJson = prefs.getString('notifications');
+      if (notifJson != null) {
+        final List<dynamic> decoded = json.decode(notifJson);
+        return decoded.where((n) => n['isRead'] == false).length;
+      }
+    } catch (e) {
+      debugPrint('Error getting unread count: $e');
+    }
+    return 0;
+  }
+
+  // Widget badge notifikasi (untuk digunakan di halaman lain)
+  static Widget buildNotificationBadge({
+    required int unreadCount,
+    required VoidCallback onTap,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(right: 12, top: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            icon: const Icon(
+              Icons.notifications_none,
+              color: Colors.white,
+              size: 22,
+            ),
+            onPressed: onTap,
+          ),
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: 8,
+            top: 4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Text(
+                unreadCount > 9 ? '9+' : '$unreadCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

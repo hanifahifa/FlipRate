@@ -2,6 +2,7 @@
 // ACTIVITY PAGE - FlipRate (SF Pro Edition)
 // (Realtime Exchange Rate via open.er-api.com)
 // dengan History Manager & Real Data + See More
+// FIXED: Insight logic yang lebih akurat
 // ------------------------------------------------------
 
 import 'dart:convert';
@@ -40,7 +41,7 @@ class _ActivityPageState extends State<ActivityPage> {
   Future<double> fetchExchangeRate(String from, String to) async {
     try {
       final url = Uri.parse('https://open.er-api.com/v6/latest/$from');
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -55,6 +56,8 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   Future<void> _loadAllData() async {
+    if (!mounted) return;
+
     setState(() => isLoading = true);
 
     // Load conversion history dari SharedPreferences
@@ -63,7 +66,9 @@ class _ActivityPageState extends State<ActivityPage> {
     // Load recently viewed dari HistoryManager
     await _loadRecentlyViewed();
 
-    setState(() => isLoading = false);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
   /// Mengambil conversion history dari HistoryManager
@@ -71,14 +76,18 @@ class _ActivityPageState extends State<ActivityPage> {
     try {
       final history = await HistoryManager.getConversionHistory();
 
-      setState(() {
-        conversionHistory = history;
-      });
+      if (mounted) {
+        setState(() {
+          conversionHistory = history;
+        });
+      }
     } catch (e) {
       debugPrint('Error loading conversion history: $e');
-      setState(() {
-        conversionHistory = [];
-      });
+      if (mounted) {
+        setState(() {
+          conversionHistory = [];
+        });
+      }
     }
   }
 
@@ -88,7 +97,10 @@ class _ActivityPageState extends State<ActivityPage> {
       final viewed = await HistoryManager.getRecentlyViewed();
       final List<Map<String, dynamic>> tempViewed = [];
 
+      // Process data tanpa setState di dalam loop
       for (final item in viewed) {
+        if (!mounted) break; // Stop jika widget sudah di-dispose
+
         final from = item['from'] as String;
         final to = item['to'] as String;
         final dt = item['time'] as DateTime;
@@ -105,14 +117,19 @@ class _ActivityPageState extends State<ActivityPage> {
         });
       }
 
-      setState(() {
-        recentlyViewed = tempViewed;
-      });
+      // setState hanya sekali setelah semua data selesai di-load
+      if (mounted) {
+        setState(() {
+          recentlyViewed = tempViewed;
+        });
+      }
     } catch (e) {
       debugPrint('Error loading recently viewed: $e');
-      setState(() {
-        recentlyViewed = [];
-      });
+      if (mounted) {
+        setState(() {
+          recentlyViewed = [];
+        });
+      }
     }
   }
 
@@ -121,20 +138,61 @@ class _ActivityPageState extends State<ActivityPage> {
       return 'Start converting currencies to get personalized insights.';
     }
 
-    final usdCount = conversionHistory
-        .where((c) => c['fromCode'] == 'USD')
-        .length;
-    final recentMostViewed = recentlyViewed.isNotEmpty
-        ? recentlyViewed.first['pair']
-        : '';
+    // Hitung frekuensi semua currency (dari fromCode dan toCode)
+    Map<String, int> currencyCount = {};
 
-    if (usdCount >= 1) {
-      return 'You frequently converted USD this week — monitor short-term volatility.';
-    } else if (recentMostViewed.contains('EUR')) {
-      return 'You often viewed EUR — watch for EUR → IDR movements in the coming days.';
-    } else {
-      return 'Monitor the currencies in your portfolio to minimize risks.';
+    for (var conversion in conversionHistory) {
+      final fromCode = conversion['fromCode'] as String;
+      final toCode = conversion['toCode'] as String;
+
+      // Hitung fromCode
+      currencyCount[fromCode] = (currencyCount[fromCode] ?? 0) + 1;
+
+      // Hitung toCode
+      currencyCount[toCode] = (currencyCount[toCode] ?? 0) + 1;
     }
+
+    // Cari currency yang paling sering digunakan
+    String mostUsedCurrency = '';
+    int maxCount = 0;
+
+    currencyCount.forEach((currency, count) {
+      if (count > maxCount) {
+        maxCount = count;
+        mostUsedCurrency = currency;
+      }
+    });
+
+    // Generate insight berdasarkan currency yang paling sering
+    if (mostUsedCurrency.isNotEmpty) {
+      // Hitung berapa kali currency ini dikonversi
+      final conversionCount = conversionHistory.length;
+
+      if (mostUsedCurrency == 'AED') {
+        return 'You converted $mostUsedCurrency $conversionCount times — UAE Dirham shows consistent activity!';
+      } else if (mostUsedCurrency == 'USD') {
+        return 'You converted USD $conversionCount times — monitor US Dollar volatility for better rates.';
+      } else if (mostUsedCurrency == 'EUR') {
+        return 'You converted EUR $conversionCount times — Euro rates are fluctuating this week.';
+      } else if (mostUsedCurrency == 'IDR') {
+        return 'You converted IDR $conversionCount times — great for managing local transactions!';
+      } else if (mostUsedCurrency == 'JPY') {
+        return 'You converted JPY $conversionCount times — Japanese Yen activity detected.';
+      } else if (mostUsedCurrency == 'AUD') {
+        return 'You converted AUD $conversionCount times — Australian Dollar is your focus currency.';
+      } else {
+        return 'You converted $mostUsedCurrency $conversionCount times — stay updated on its exchange trends.';
+      }
+    }
+
+    // Fallback: cek recently viewed (jarang terjadi)
+    if (recentlyViewed.isNotEmpty) {
+      final recentPair = recentlyViewed.first['pair'] as String;
+      return 'You recently viewed $recentPair rates — check back for updates.';
+    }
+
+    // Seharusnya tidak pernah sampai sini karena ada conversionHistory
+    return 'Start tracking more currencies to get better insights.';
   }
 
   String formatDateTimeShort(DateTime dt) =>
@@ -164,6 +222,7 @@ class _ActivityPageState extends State<ActivityPage> {
       'THB': '🇹🇭',
       'KRW': '🇰🇷',
       'INR': '🇮🇳',
+      'AED': '🇦🇪',
     };
     return flags[currencyCode.toUpperCase()] ?? '🌍';
   }
@@ -600,9 +659,11 @@ class _ActivityPageState extends State<ActivityPage> {
                   padding: const EdgeInsets.only(right: 0),
                   child: InkWell(
                     onTap: () {
-                      setState(() {
-                        showAllRecentlyViewed = true;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          showAllRecentlyViewed = true;
+                        });
+                      }
                     },
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
@@ -614,7 +675,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           color: primaryGreen.withOpacity(0.3),
                         ),
                       ),
-                      child: Column(
+                      child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
@@ -622,7 +683,7 @@ class _ActivityPageState extends State<ActivityPage> {
                             color: primaryGreen,
                             size: 24,
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'See\nMore',
                             textAlign: TextAlign.center,
@@ -745,9 +806,11 @@ class _ActivityPageState extends State<ActivityPage> {
             padding: const EdgeInsets.only(top: 12),
             child: InkWell(
               onTap: () {
-                setState(() {
-                  showAllRecentlyViewed = false;
-                });
+                if (mounted) {
+                  setState(() {
+                    showAllRecentlyViewed = false;
+                  });
+                }
               },
               borderRadius: BorderRadius.circular(12),
               child: Container(
@@ -757,10 +820,10 @@ class _ActivityPageState extends State<ActivityPage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: primaryGreen.withOpacity(0.3)),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Show Less',
                       style: TextStyle(
                         color: primaryGreen,
@@ -769,8 +832,8 @@ class _ActivityPageState extends State<ActivityPage> {
                         fontFamily: 'SF Pro',
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(
+                    SizedBox(width: 6),
+                    Icon(
                       Icons.keyboard_arrow_up,
                       color: primaryGreen,
                       size: 20,
