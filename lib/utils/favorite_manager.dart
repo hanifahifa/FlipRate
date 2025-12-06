@@ -4,7 +4,6 @@
 // ------------------------------------------------------
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 class FavoriteManager {
   static const String _key = 'favorite_currencies';
@@ -13,7 +12,7 @@ class FavoriteManager {
   static Future<bool> addFavorite(String currencyCode) async {
     final prefs = await SharedPreferences.getInstance();
     final favorites = await getFavorites();
-    
+
     if (!favorites.contains(currencyCode)) {
       favorites.add(currencyCode);
       return await prefs.setStringList(_key, favorites);
@@ -25,7 +24,7 @@ class FavoriteManager {
   static Future<bool> removeFavorite(String currencyCode) async {
     final prefs = await SharedPreferences.getInstance();
     final favorites = await getFavorites();
-    
+
     if (favorites.contains(currencyCode)) {
       favorites.remove(currencyCode);
       return await prefs.setStringList(_key, favorites);
