@@ -1,13 +1,13 @@
 // ------------------------------------------------------
-// DASHBOARD PAGE - FlipRate (iPhone-Style Professional UI)
-// DENGAN DESAIN MODERN DAN INTERFACE PROFESIONAL
+// DASHBOARD PAGE - FlipRate (Integrated with Backend)
+// iPhone-Style Professional UI + Backend Logic
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../repositories/currency_repository.dart';
+import '../services/exchange_rate_service.dart';
 import '../widget/all_rates.dart';
 import '../widget/convert.dart';
 import '../widget/analysis.dart';
@@ -21,6 +21,11 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  // UI State
+  ScrollController _scrollController = ScrollController();
+  bool _isScrolled = false;
+
+  // Data State
   List<Map<String, dynamic>> popularRates = [];
   List<FlSpot> chartData = [];
   List<String> chartDates = [];
@@ -28,24 +33,13 @@ class _DashboardPageState extends State<DashboardPage> {
   bool isChartLoading = true;
   String errorMessage = '';
   String chartErrorMessage = '';
-  int? touchedIndex;
-  ScrollController _scrollController = ScrollController();
-  bool _isScrolled = false;
 
   final List<String> popularCurrencies = ['USD', 'EUR', 'JPY', 'SGD'];
-
-  final Map<String, String> currencyFlags = {
-    'USD': '🇺🇸',
-    'EUR': '🇪🇺',
-    'JPY': '🇯🇵',
-    'SGD': '🇸🇬',
-  };
 
   @override
   void initState() {
     super.initState();
-    fetchRates();
-    fetchHistoricalData();
+    _initData();
 
     _scrollController.addListener(() {
       if (_scrollController.offset > 50 && !_isScrolled) {
@@ -63,136 +57,102 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // FUNGSI FETCH CURRENT RATES
+  // INITIALIZE DATA
   // ============================================
-  Future<void> fetchRates() async {
+  Future<void> _initData() async {
+    await Future.wait([_fetchPopularRates(), _fetchHistoricalData()]);
+  }
+
+  // ============================================
+  // FETCH POPULAR RATES (Using Repository)
+  // ============================================
+  Future<void> _fetchPopularRates() async {
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
-    final List<String> apiUrls = [
-      'https://api.exchangerate-api.com/v4/latest/USD',
-      'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
-      'https://api.frankfurter.app/latest?from=USD',
-    ];
+    try {
+      final rates = await CurrencyRepository.getPopularRates(
+        currencies: popularCurrencies,
+      );
 
-    for (int i = 0; i < apiUrls.length; i++) {
-      try {
-        final response = await http
-            .get(Uri.parse(apiUrls[i]))
-            .timeout(const Duration(seconds: 10));
-
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          Map<String, dynamic> rates;
-          double idrRate;
-
-          if (i == 0) {
-            rates = data['rates'] as Map<String, dynamic>;
-            idrRate = (rates['IDR'] as num).toDouble();
-          } else if (i == 1) {
-            rates = data['usd'] as Map<String, dynamic>;
-            idrRate = (rates['idr'] as num).toDouble();
-          } else {
-            rates = data['rates'] as Map<String, dynamic>;
-            idrRate = (rates['IDR'] as num).toDouble();
-          }
-
-          List<Map<String, dynamic>> ratesList = [];
-
-          for (String currency in popularCurrencies) {
-            final currencyLower = currency.toLowerCase();
-            final rate = rates[currency] ?? rates[currencyLower];
-
-            if (rate != null) {
-              final double valueInIdr = idrRate / (rate as num).toDouble();
-              final changeData = _generateRealChange(currency);
-
-              ratesList.add({
-                'pair': '$currency → IDR',
-                'currency': currency,
-                'value': valueInIdr,
-                'change': changeData['change'],
-                'isUpValue': changeData['isUp'],
-                'flag': currencyFlags[currency] ?? '🏳️',
-              });
-            }
-          }
-
-          setState(() {
-            popularRates = ratesList;
-            isLoading = false;
-          });
-
-          return;
-        }
-      } catch (e) {
-        if (i == apiUrls.length - 1) {
-          setState(() {
-            isLoading = false;
-            errorMessage = 'Unable to fetch rates. Please try again.';
-          });
-        }
-        continue;
-      }
+      setState(() {
+        popularRates = rates.map((rate) {
+          return {
+            'pair': '${rate['currency']} → IDR',
+            'currency': rate['currency'],
+            'value': rate['rate'] as double,
+            // 'change' di sini SUDAH STRING (misal: "+0.20%") dari Repo
+            'change': rate['change'],
+            'isUpValue': rate['isUp'] as bool,
+            'flag': rate['flag'],
+          };
+        }).toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      print('❌ Dashboard Error: $e');
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Unable to fetch rates.';
+      });
     }
   }
 
   // ============================================
-  // FUNGSI FETCH HISTORICAL DATA (3 HARI)
+  // FETCH HISTORICAL DATA (3 Days for Chart)
   // ============================================
-  Future<void> fetchHistoricalData() async {
+  Future<void> _fetchHistoricalData() async {
     setState(() {
       isChartLoading = true;
       chartErrorMessage = '';
     });
 
     try {
+      print('🔄 Dashboard: Fetching historical data...');
+
       final now = DateTime.now();
-      final threeDaysAgo = now.subtract(const Duration(days: 3));
+      List<FlSpot> spots = [];
+      List<String> dates = [];
 
-      final startDate = DateFormat('yyyy-MM-dd').format(threeDaysAgo);
-      final endDate = DateFormat('yyyy-MM-dd').format(now);
+      // Fetch data for the last 4 days (including today)
+      for (int i = 3; i >= 0; i--) {
+        final targetDate = now.subtract(Duration(days: i));
+        final formattedDate = DateFormat('yyyy-MM-dd').format(targetDate);
 
-      final url =
-          'https://api.frankfurter.app/$startDate..$endDate?from=USD&to=IDR';
+        try {
+          final historicalRates =
+              await ExchangeRateService.fetchHistoricalRates(
+                baseCurrency: 'USD',
+                daysAgo: i,
+              );
 
-      final response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 10));
+          final idrRate = historicalRates['IDR'] ?? 15700.0;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final rates = data['rates'] as Map<String, dynamic>;
+          spots.add(FlSpot((3 - i).toDouble(), idrRate));
+          dates.add(DateFormat('d MMM').format(targetDate));
 
-        List<FlSpot> spots = [];
-        List<String> dates = [];
-        int index = 0;
-
-        final sortedDates = rates.keys.toList()..sort();
-
-        for (String date in sortedDates) {
-          final dayRates = rates[date] as Map<String, dynamic>;
-          final idrRate = (dayRates['IDR'] as num).toDouble();
-
-          spots.add(FlSpot(index.toDouble(), idrRate));
-
-          final dateTime = DateTime.parse(date);
-          dates.add(DateFormat('d MMM').format(dateTime));
-
-          index++;
+          print('✅ Got rate for $formattedDate: $idrRate');
+        } catch (e) {
+          print('⚠️ Failed to fetch data for $formattedDate: $e');
+          // Use fallback data for this day
+          spots.add(FlSpot((3 - i).toDouble(), 15700.0));
+          dates.add(DateFormat('d MMM').format(targetDate));
         }
-
-        setState(() {
-          chartData = spots;
-          chartDates = dates;
-          isChartLoading = false;
-        });
-      } else {
-        throw Exception('Failed to load historical data');
       }
+
+      setState(() {
+        chartData = spots;
+        chartDates = dates;
+        isChartLoading = false;
+      });
+
+      print('✅ Dashboard: Chart data loaded (${chartData.length} points)');
     } catch (e) {
+      print('❌ Dashboard Chart Error: $e');
+
+      // Fallback data
       final now = DateTime.now();
       setState(() {
         chartData = [
@@ -213,27 +173,9 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  Map<String, dynamic> _generateRealChange(String currency) {
-    if (chartData.length >= 2 && currency == 'USD') {
-      final yesterday = chartData[chartData.length - 2].y;
-      final today = chartData.last.y;
-      final difference = today - yesterday;
-      final percentageChange = (difference / yesterday) * 100;
-      return {
-        'change':
-            '${percentageChange >= 0 ? '+' : ''}${percentageChange.toStringAsFixed(1)}%',
-        'isUp': percentageChange >= 0,
-      };
-    }
-
-    final random = (DateTime.now().millisecond % 10) / 10;
-    final isPositive = DateTime.now().second % 2 == 0;
-    return {
-      'change': '${isPositive ? '+' : '-'}${random.toStringAsFixed(1)}%',
-      'isUp': isPositive,
-    };
-  }
-
+  // ============================================
+  // HELPER: FORMAT NUMBER
+  // ============================================
   String _formatNumber(double number) {
     if (number >= 1000) {
       return number
@@ -249,6 +191,9 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  // ============================================
+  // HELPER: GET CHART INSIGHT
+  // ============================================
   String _getChartInsight() {
     if (chartData.length < 2) return 'Insufficient data for trend analysis';
 
@@ -273,8 +218,11 @@ class _DashboardPageState extends State<DashboardPage> {
     return '$emoji IDR has $direction by ${percentageChange.abs().toStringAsFixed(2)}% (Rp${difference.abs().toStringAsFixed(0)}) in 3 days';
   }
 
+  // ============================================
+  // REFRESH ALL DATA
+  // ============================================
   Future<void> _refreshAll() async {
-    await Future.wait([fetchRates(), fetchHistoricalData()]);
+    await Future.wait([_fetchPopularRates(), _fetchHistoricalData()]);
   }
 
   @override
@@ -412,7 +360,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     // Footer
                     Center(
                       child: Text(
-                        '© 2025 FlipRate — Smart Currency Converter',
+                        '© 2025 FlipRate – Smart Currency Converter',
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 11,
@@ -533,7 +481,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ],
                     ),
                   )
-                : _buildImprovedChart(),
+                : _buildChart(),
           ),
           if (chartErrorMessage.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -586,9 +534,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // BUILD IMPROVED CHART
+  // BUILD CHART
   // ============================================
-  Widget _buildImprovedChart() {
+  Widget _buildChart() {
     final minY = chartData.map((e) => e.y).reduce((a, b) => a < b ? a : b);
     final maxY = chartData.map((e) => e.y).reduce((a, b) => a > b ? a : b);
     final range = maxY - minY;
@@ -900,7 +848,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: fetchRates,
+                          onPressed: _fetchPopularRates,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2E7D32),
                             foregroundColor: Colors.white,
@@ -934,18 +882,20 @@ class _DashboardPageState extends State<DashboardPage> {
                     color: Color(0xFFF2F2F7),
                     height: 1,
                   ),
+                  // Di dalam ListView.separated dashboard_page.dart
                   itemBuilder: (context, i) {
                     final data = popularRates[i];
-                    final change = data['change'] as String;
-                    final isUp =
-                        data['isUpValue'] as bool? ?? change.startsWith('+');
+
+                    // Ambil data yang sudah matang dari Map
+                    final String change = data['change']; // Ini sudah "+0.50%"
+                    final bool isUp = data['isUpValue'];
 
                     return _currencyListTile(
-                      data['pair'] as String,
-                      'Rp${_formatNumber(data['value'] as double)}',
-                      change,
+                      data['pair'],
+                      'Rp${_formatNumber(data['value'])}',
+                      change, // Kirim string langsung
                       isUp,
-                      data['flag'] as String,
+                      data['flag'],
                     );
                   },
                 ),

@@ -1,12 +1,12 @@
 // ------------------------------------------------------
-// ALL RATES WIDGET - FlipRate (Fixed Calculation)
+// ALL RATES WIDGET - Refactored (Using Repository)
+// Sesuai Spesifikasi: UI terpisah dari Logic Data
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import '../pages/detail_rate_page.dart';
+import '../repositories/currency_repository.dart'; // Import Repository
+import '../pages/addPages/detail_rate_page.dart';
 import '../utils/history_manager.dart';
 
 class AllRatesWidget extends StatefulWidget {
@@ -17,53 +17,19 @@ class AllRatesWidget extends StatefulWidget {
 }
 
 class _AllRatesWidgetState extends State<AllRatesWidget> {
+  // State Data
   List<Map<String, dynamic>> allRates = [];
   List<Map<String, dynamic>> filteredRates = [];
-  Map<String, double> yesterdayRates = {};
+
+  // State UI
   bool isLoading = true;
   String errorMessage = '';
   final _searchController = TextEditingController();
 
-  final Map<String, String> currencyFlags = {
-    'USD': '🇺🇸',
-    'EUR': '🇪🇺',
-    'JPY': '🇯🇵',
-    'GBP': '🇬🇧',
-    'SGD': '🇸🇬',
-    'AUD': '🇦🇺',
-    'CNY': '🇨🇳',
-    'MYR': '🇲🇾',
-    'THB': '🇹🇭',
-    'KRW': '🇰🇷',
-    'INR': '🇮🇳',
-    'CHF': '🇨🇭',
-    'CAD': '🇨🇦',
-    'NZD': '🇳🇿',
-    'PHP': '🇵🇭',
-  };
-
-  final Map<String, String> currencyNames = {
-    'USD': 'US Dollar',
-    'EUR': 'Euro',
-    'JPY': 'Japanese Yen',
-    'GBP': 'British Pound',
-    'SGD': 'Singapore Dollar',
-    'AUD': 'Australian Dollar',
-    'CNY': 'Chinese Yuan',
-    'MYR': 'Malaysian Ringgit',
-    'THB': 'Thai Baht',
-    'KRW': 'South Korean Won',
-    'INR': 'Indian Rupee',
-    'CHF': 'Swiss Franc',
-    'CAD': 'Canadian Dollar',
-    'NZD': 'New Zealand Dollar',
-    'PHP': 'Philippine Peso',
-  };
-
   @override
   void initState() {
     super.initState();
-    fetchYesterdayRates().then((_) => fetchRates());
+    _fetchRates(); // Panggil fungsi fetch yang baru
     _searchController.addListener(_filterRates);
   }
 
@@ -74,122 +40,52 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
   }
 
   // =====================================================
-  // FETCH DATA API
+  // FETCH DATA VIA REPOSITORY (Sesuai Ketentuan)
   // =====================================================
-  Future<void> fetchRates() async {
+  Future<void> _fetchRates() async {
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
-    final apis = [
-      'https://api.exchangerate-api.com/v4/latest/USD',
-      'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
-      'https://api.frankfurter.app/latest?from=USD',
-    ];
+    try {
+      // Panggil Repository alih-alih HTTP langsung
+      // Logic backend, perhitungan IDR, dan % perubahan sudah diurus di sana
+      final rates = await CurrencyRepository.getAllRates();
 
-    for (int i = 0; i < apis.length; i++) {
-      try {
-        final response = await http
-            .get(Uri.parse(apis[i]))
-            .timeout(const Duration(seconds: 10));
-        if (response.statusCode != 200) continue;
-
-        final data = json.decode(response.body);
-        Map<String, dynamic> rates;
-        double idrRate;
-
-        if (i == 0) {
-          rates = data['rates'];
-          idrRate = (rates['IDR'] as num).toDouble();
-        } else if (i == 1) {
-          rates = data['usd'];
-          idrRate = (rates['idr'] as num).toDouble();
-        } else {
-          rates = data['rates'];
-          idrRate = (rates['IDR'] as num).toDouble();
-        }
-
-        final list =
-            rates.entries.where((e) => e.key.toUpperCase() != 'IDR').map((e) {
-              final cur = e.key.toUpperCase();
-              final curToUsd = (e.value as num).toDouble();
-              final curToIdr = idrRate / curToUsd;
-
-              return {
-                'currency': cur,
-                'name': currencyNames[cur] ?? cur,
-                'flag': currencyFlags[cur] ?? '🏳️',
-                'rate': curToIdr,
-                'change': _calcChange(cur, curToIdr, idrRate),
-              };
-            }).toList()..sort(
-              (a, b) =>
-                  a['currency'].toString().compareTo(b['currency'].toString()),
-            );
-
+      if (mounted) {
         setState(() {
-          allRates = list;
-          filteredRates = list;
+          allRates = rates;
+          filteredRates = rates;
           isLoading = false;
         });
-        return;
-      } catch (e) {
-        if (i == apis.length - 1) {
-          setState(() {
-            isLoading = false;
-            errorMessage =
-                'Failed to fetch rates. Please check your connection.';
-          });
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Gagal memuat data. Periksa koneksi internet Anda.';
+        });
+        print("Error di AllRates: $e");
       }
     }
   }
 
   // =====================================================
-  // FETCH HARGA KEMARIN
+  // FILTER LOGIC (Tetap di UI karena ini logic tampilan)
   // =====================================================
-  Future<void> fetchYesterdayRates() async {
-    final now = DateTime.now();
-    final yesterday = now.subtract(const Duration(days: 1));
-    final twoDaysAgo = now.subtract(const Duration(days: 2));
-
-    String formatDate(DateTime date) =>
-        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-    final urls = [
-      "https://api.frankfurter.app/${formatDate(yesterday)}?from=USD",
-      "https://api.frankfurter.app/${formatDate(twoDaysAgo)}?from=USD",
-    ];
-
-    for (final url in urls) {
-      try {
-        final res = await http.get(Uri.parse(url));
-
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body);
-          if (data['rates'] != null && data['rates'].isNotEmpty) {
-            setState(() {
-              yesterdayRates = Map<String, double>.from(
-                data['rates'].map(
-                  (k, v) => MapEntry(
-                    k.toString().toUpperCase(),
-                    (v as num).toDouble(),
-                  ),
-                ),
-              );
-            });
-            print("✅ Yesterday rates loaded from $url");
-            return;
-          }
-        }
-      } catch (e) {
-        print("⚠️ Error fetching yesterday rates from $url: $e");
-      }
-    }
-
-    setState(() => yesterdayRates = {});
+  void _filterRates() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      filteredRates = allRates.where((r) {
+        final name = (r['name'] ?? '').toString().toLowerCase();
+        final code = (r['currency'] ?? '').toString().toLowerCase();
+        return name.contains(query) || code.contains(query);
+      }).toList();
+    });
   }
+
+  String _fmt(double n) => NumberFormat('#,###.##').format(n);
 
   // =====================================================
   // UI BUILD
@@ -207,13 +103,11 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await fetchYesterdayRates();
-          await fetchRates();
-        },
+        onRefresh: _fetchRates, // Tarik untuk refresh via Repo
         color: const Color(0xFF2E7D32),
         child: Column(
           children: [
+            // Search Bar
             Padding(
               padding: const EdgeInsets.all(16),
               child: TextField(
@@ -223,7 +117,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                     Icons.search,
                     color: Color(0xFF2E7D32),
                   ),
-                  hintText: 'Search currency...',
+                  hintText: 'Cari mata uang (USD, Euro...)',
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -239,6 +133,8 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                 ),
               ),
             ),
+
+            // Content List
             Expanded(
               child: isLoading
                   ? const Center(
@@ -247,9 +143,31 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                       ),
                     )
                   : errorMessage.isNotEmpty
-                  ? Center(child: Text(errorMessage))
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(errorMessage, textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _fetchRates,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text("Coba Lagi"),
+                          ),
+                        ],
+                      ),
+                    )
                   : filteredRates.isEmpty
-                  ? const Center(child: Text('No data found'))
+                  ? const Center(child: Text('Data tidak ditemukan'))
                   : ListView.builder(
                       itemCount: filteredRates.length,
                       itemBuilder: (context, i) =>
@@ -263,10 +181,24 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
   }
 
   // =====================================================
-  // ITEM CARD DENGAN NAVIGASI KE DETAIL
+  // ITEM CARD
   // =====================================================
   Widget _buildCard(Map<String, dynamic> r, BuildContext context) {
-    final isUp = r['change'].toString().startsWith('+');
+    // Logic menentukan warna & arah panah sudah ada di data Repo ('isUp')
+    // Tapi kita bisa cek manual juga dari string change
+    final isUp = (r['isUp'] as bool?) ?? r['change'].toString().startsWith('+');
+    final changeText = r['change'].toString();
+
+    // Data format dari Repository:
+    // {
+    //   'currency': 'USD',
+    //   'name': 'US Dollar',
+    //   'flag': '🇺🇸',
+    //   'rate': 15000.0,
+    //   'change': '+0.50%', // Sudah String terformat
+    //   'isUp': true
+    // }
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -295,52 +227,28 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              r['change'],
-              style: TextStyle(color: isUp ? Colors.green : Colors.red),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isUp ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 12,
+                  color: isUp ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  changeText,
+                  style: TextStyle(
+                    color: isUp ? Colors.green : Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
-  }
-
-  void _filterRates() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      filteredRates = allRates.where((r) {
-        final name = (r['name'] ?? '').toString().toLowerCase();
-        final code = (r['currency'] ?? '').toString().toLowerCase();
-        return name.contains(query) || code.contains(query);
-      }).toList();
-    });
-  }
-
-  String _fmt(double n) => NumberFormat('#,###.##').format(n);
-
-  // =====================================================
-  // CALC CHANGE - FIXED VERSION (SAMA DENGAN FAVORITE PAGE)
-  // =====================================================
-  String _calcChange(String cur, double todayCurToIdr, double todayUsdToIdr) {
-    if (yesterdayRates.isEmpty ||
-        !yesterdayRates.containsKey(cur) ||
-        !yesterdayRates.containsKey('IDR')) {
-      return '0.00%';
-    }
-
-    // Yesterday: 1 USD = yesterdayRates['IDR'] IDR
-    // Yesterday: 1 USD = yesterdayRates[cur] CUR
-    // Jadi: 1 CUR = yesterdayRates['IDR'] / yesterdayRates[cur] IDR
-
-    final yesterdayUsdToIdr = yesterdayRates['IDR']!;
-    final yesterdayUsdToCur = yesterdayRates[cur]!;
-    final yesterdayCurToIdr = yesterdayUsdToIdr / yesterdayUsdToCur;
-
-    // Hitung perubahan persen
-    final diff = todayCurToIdr - yesterdayCurToIdr;
-    final percent = (diff / yesterdayCurToIdr) * 100;
-
-    final sign = percent >= 0 ? '+' : '';
-    return '$sign${percent.toStringAsFixed(2)}%';
   }
 }

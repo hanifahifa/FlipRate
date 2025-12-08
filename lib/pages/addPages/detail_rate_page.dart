@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../utils/favorite_manager.dart';
+import '../../utils/favorite_manager.dart';
 
 class DetailRatePage extends StatefulWidget {
   final Map<String, dynamic> rateData;
@@ -33,18 +33,18 @@ class _DetailRatePageState extends State<DetailRatePage> {
   Future<void> _toggleFavorite() async {
     final currency = widget.rateData['currency'] ?? '';
     final success = await FavoriteManager.toggleFavorite(currency);
-    
+
     if (success || await FavoriteManager.isFavorite(currency) != isFavorite) {
       setState(() {
         isFavorite = !isFavorite;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isFavorite 
-              ? '✅ $currency ditambahkan ke favorit'
-              : '❌ $currency dihapus dari favorit',
+            isFavorite
+                ? '✅ $currency ditambahkan ke favorit'
+                : '❌ $currency dihapus dari favorit',
           ),
           duration: const Duration(seconds: 2),
           backgroundColor: isFavorite ? Colors.green : Colors.red,
@@ -56,9 +56,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
   String getFlag(String code) {
     if (code.length < 2) return '';
     final countryCode = code.substring(0, 2).toUpperCase();
-    return String.fromCharCodes(
-      countryCode.codeUnits.map((c) => c + 127397),
-    );
+    return String.fromCharCodes(countryCode.codeUnits.map((c) => c + 127397));
   }
 
   @override
@@ -130,7 +128,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Card Info
             Card(
               color: Colors.white,
@@ -139,39 +137,46 @@ class _DetailRatePageState extends State<DetailRatePage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 20,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _infoRow('💰 Nilai Saat Ini',
-                        'Rp${NumberFormat('#,###.##').format(rate)}'),
+                    _infoRow(
+                      '💰 Nilai Saat Ini',
+                      'Rp${NumberFormat('#,###.##').format(rate)}',
+                    ),
                     const Divider(),
-                    _infoRow('📉 Perubahan', change,
-                        valueColor: isUp ? Colors.green : Colors.red),
+                    _infoRow(
+                      '📉 Perubahan',
+                      change,
+                      valueColor: isUp ? Colors.green : Colors.red,
+                    ),
                     const Divider(),
                     _infoRow('🌍 Negara', _getCountryName(currency)),
                     const Divider(),
                     _infoRow('🔤 Kode Mata Uang', currency),
                     const Divider(),
-                    _infoRow('🕒 Terakhir Diperbarui',
-                        DateFormat('d MMM yyyy, HH:mm').format(DateTime.now())),
+                    _infoRow(
+                      '🕒 Terakhir Diperbarui',
+                      DateFormat('d MMM yyyy, HH:mm').format(DateTime.now()),
+                    ),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Tombol Add/Remove Favorite (Alternatif di bawah card)
             if (!isLoading)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _toggleFavorite,
-                  icon: Icon(
-                    isFavorite ? Icons.star : Icons.star_border,
-                  ),
+                  icon: Icon(isFavorite ? Icons.star : Icons.star_border),
                   label: Text(
                     isFavorite ? 'Hapus dari Favorit' : 'Tambah ke Favorit',
                     style: const TextStyle(
@@ -180,7 +185,9 @@ class _DetailRatePageState extends State<DetailRatePage> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isFavorite ? Colors.grey[400] : const Color(0xFF2E7D32),
+                    backgroundColor: isFavorite
+                        ? Colors.grey[400]
+                        : const Color(0xFF2E7D32),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(

@@ -63,7 +63,6 @@ class _NavbarState extends State<Navbar> with SingleTickerProviderStateMixin {
               color: const Color(0xFF1B5E20).withOpacity(0.08),
               blurRadius: 24,
               offset: const Offset(0, 4),
-              spreadRadius: 0,
             ),
             BoxShadow(
               color: Colors.black.withOpacity(0.04),

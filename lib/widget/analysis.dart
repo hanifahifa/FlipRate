@@ -1,13 +1,11 @@
 // ------------------------------------------------------
-// ANALYSIS PAGE - FlipRate (SF Pro Edition)
-// Market News, Top Performers, Predictions
-// IMPROVED UI WITH BETTER SPACING & VISUAL HIERARCHY
+// ANALYSIS PAGE - Refactored (Using Repository)
+// Sesuai Spesifikasi: UI terpisah dari Logic Data
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../repositories/currency_repository.dart'; // Import Repository
 
 class AnalysisPage extends StatefulWidget {
   const AnalysisPage({super.key});
@@ -17,52 +15,20 @@ class AnalysisPage extends StatefulWidget {
 }
 
 class _AnalysisPageState extends State<AnalysisPage> {
+  // Theme Colors
   static const Color primaryGreen = Color(0xFF2E7D32);
   static const Color lightGreen = Color(0xFFF1F8E9);
-  static const Color accentGreen = Color(0xFFDDE8D4);
-
+  
+  // Data State
   List<Map<String, dynamic>> topGainers = [];
   List<Map<String, dynamic>> topLosers = [];
   Map<String, dynamic> predictions = {};
+  
+  // UI State
   bool isLoading = true;
   String errorMessage = '';
 
-  final Map<String, String> currencyFlags = {
-    'USD': '🇺🇸',
-    'EUR': '🇪🇺',
-    'JPY': '🇯🇵',
-    'GBP': '🇬🇧',
-    'SGD': '🇸🇬',
-    'AUD': '🇦🇺',
-    'CNY': '🇨🇳',
-    'MYR': '🇲🇾',
-    'THB': '🇹🇭',
-    'KRW': '🇰🇷',
-    'INR': '🇮🇳',
-    'CHF': '🇨🇭',
-    'CAD': '🇨🇦',
-    'NZD': '🇳🇿',
-    'PHP': '🇵🇭',
-  };
-
-  final Map<String, String> currencyNames = {
-    'USD': 'US Dollar',
-    'EUR': 'Euro',
-    'JPY': 'Japanese Yen',
-    'GBP': 'British Pound',
-    'SGD': 'Singapore Dollar',
-    'AUD': 'Australian Dollar',
-    'CNY': 'Chinese Yuan',
-    'MYR': 'Malaysian Ringgit',
-    'THB': 'Thai Baht',
-    'KRW': 'South Korean Won',
-    'INR': 'Indian Rupee',
-    'CHF': 'Swiss Franc',
-    'CAD': 'Canadian Dollar',
-    'NZD': 'New Zealand Dollar',
-    'PHP': 'Philippine Peso',
-  };
-
+  // Static Data (News - Hardcoded as per design)
   final List<Map<String, dynamic>> marketInsights = [
     {
       'icon': Icons.trending_up,
@@ -75,8 +41,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
       'icon': Icons.info_outline,
       'color': Colors.blue,
       'title': 'Asian Markets Update',
-      'subtitle':
-          'SGD and JPY show moderate volatility amid regional trade talks',
+      'subtitle': 'SGD and JPY show moderate volatility amid regional trade talks',
       'time': '5 hours ago',
     },
     {
@@ -94,6 +59,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
     _loadAnalysisData();
   }
 
+  // ==========================================
+  // LOGIC: LOAD DATA VIA REPOSITORY
+  // ==========================================
   Future<void> _loadAnalysisData() async {
     setState(() {
       isLoading = true;
@@ -101,151 +69,90 @@ class _AnalysisPageState extends State<AnalysisPage> {
     });
 
     try {
-      await _fetchTopPerformers();
-      _calculatePredictions();
-      setState(() => isLoading = false);
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Failed to load analysis data';
+      // 1. Ambil semua data rate yang sudah diproses oleh Repository
+      // Data sudah berisi: currency, flag, name, rate, change (String format)
+      final allRates = await CurrencyRepository.getAllRates();
+
+      // 2. Sorting Logic (Dilakukan di UI/ViewModel karena ini kebutuhan Tampilan)
+      // Kita perlu convert string "+0.50%" kembali ke double untuk sorting
+      allRates.sort((a, b) {
+        double valA = _parseChange(a['change']);
+        double valB = _parseChange(b['change']);
+        return valB.compareTo(valA); // Descending (Besar ke Kecil)
       });
-    }
-  }
 
-  Future<void> _fetchTopPerformers() async {
-    final apis = [
-      'https://api.exchangerate-api.com/v4/latest/USD',
-      'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
-      'https://api.frankfurter.app/latest?from=USD',
-    ];
+      // 3. Ambil Top 5 Gainers (Teratas)
+      final gainers = allRates.where((r) => _parseChange(r['change']) > 0).take(5).toList();
+      
+      // 4. Ambil Top 5 Losers (Terbawah)
+      // Reverse list untuk mendapatkan nilai minus terbesar
+      final losers = allRates.where((r) => _parseChange(r['change']) < 0).toList();
+      losers.sort((a, b) {
+        double valA = _parseChange(a['change']);
+        double valB = _parseChange(b['change']);
+        return valA.compareTo(valB); // Ascending (Kecil ke Besar / Minus Gede)
+      });
+      final topLosersList = losers.take(5).toList();
 
-    Map<String, double> yesterdayRates = await _fetchYesterdayRates();
-
-    for (int i = 0; i < apis.length; i++) {
-      try {
-        final response = await http
-            .get(Uri.parse(apis[i]))
-            .timeout(const Duration(seconds: 10));
-        if (response.statusCode != 200) continue;
-
-        final data = json.decode(response.body);
-        Map<String, dynamic> rates;
-        double idrRate;
-
-        if (i == 0) {
-          rates = data['rates'];
-          idrRate = (rates['IDR'] as num).toDouble();
-        } else if (i == 1) {
-          rates = data['usd'];
-          idrRate = (rates['idr'] as num).toDouble();
-        } else {
-          rates = data['rates'];
-          idrRate = (rates['IDR'] as num).toDouble();
-        }
-
-        List<Map<String, dynamic>> allCurrencies = [];
-
-        for (var entry in rates.entries) {
-          final cur = entry.key.toUpperCase();
-          if (cur == 'IDR' || !currencyFlags.containsKey(cur)) continue;
-
-          final curToUsd = (entry.value as num).toDouble();
-          final curToIdr = idrRate / curToUsd;
-
-          double changePercent = 0.0;
-          if (yesterdayRates.containsKey(cur) &&
-              yesterdayRates.containsKey('IDR')) {
-            final yesterdayCurToIdr =
-                yesterdayRates['IDR']! / yesterdayRates[cur]!;
-            changePercent =
-                ((curToIdr - yesterdayCurToIdr) / yesterdayCurToIdr) * 100;
-          }
-
-          allCurrencies.add({
-            'currency': cur,
-            'name': currencyNames[cur] ?? cur,
-            'flag': currencyFlags[cur] ?? '🏳️',
-            'rate': curToIdr,
-            'change': changePercent,
-          });
-        }
-
-        allCurrencies.sort(
-          (a, b) => (b['change'] as double).compareTo(a['change'] as double),
-        );
-
+      if (mounted) {
         setState(() {
-          topGainers = allCurrencies
-              .where((c) => c['change'] > 0)
-              .take(5)
-              .toList();
-          topLosers = allCurrencies
-              .where((c) => c['change'] < 0)
-              .toList()
-              .reversed
-              .take(5)
-              .toList();
+          topGainers = gainers;
+          topLosers = topLosersList;
+          isLoading = false;
         });
-
-        return;
-      } catch (e) {
-        if (i == apis.length - 1) {
-          throw Exception('Failed to fetch rates');
-        }
+        
+        // 5. Hitung Prediksi setelah data masuk
+        _calculatePredictions();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Gagal memuat data analisis.';
+        });
       }
     }
   }
 
-  Future<Map<String, double>> _fetchYesterdayRates() async {
-    final now = DateTime.now();
-    final yesterday = now.subtract(const Duration(days: 1));
-    final twoDaysAgo = now.subtract(const Duration(days: 2));
-
-    String formatDate(DateTime date) =>
-        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-    final urls = [
-      "https://api.frankfurter.app/${formatDate(yesterday)}?from=USD",
-      "https://api.frankfurter.app/${formatDate(twoDaysAgo)}?from=USD",
-    ];
-
-    for (final url in urls) {
-      try {
-        final res = await http.get(Uri.parse(url));
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body);
-          if (data['rates'] != null && data['rates'].isNotEmpty) {
-            return Map<String, double>.from(
-              data['rates'].map(
-                (k, v) =>
-                    MapEntry(k.toString().toUpperCase(), (v as num).toDouble()),
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        debugPrint("⚠️ Error fetching yesterday rates: $e");
-      }
+  // Helper untuk parsing string persen ke double (misal: "+0.50%" -> 0.50)
+  double _parseChange(String changeStr) {
+    try {
+      String clean = changeStr.replaceAll('%', '').replaceAll('+', '');
+      return double.parse(clean);
+    } catch (e) {
+      return 0.0;
     }
-    return {};
   }
 
+  // ==========================================
+  // LOGIC: PREDICTIONS
+  // ==========================================
   void _calculatePredictions() {
     if (topGainers.isEmpty && topLosers.isEmpty) return;
 
     Map<String, dynamic> preds = {};
+    // Prediksi hanya untuk mata uang utama
     final List<String> mainCurrencies = ['USD', 'EUR', 'JPY', 'SGD'];
+    
+    // Gabungkan list untuk pencarian
+    final allProcessed = [...topGainers, ...topLosers];
 
     for (String cur in mainCurrencies) {
-      var data = topGainers.firstWhere(
-        (c) => c['currency'] == cur,
-        orElse: () => topLosers.firstWhere(
-          (c) => c['currency'] == cur,
-          orElse: () => {'currency': cur, 'change': 0.0},
-        ),
-      );
+      // Cari data mata uang tersebut di hasil fetch
+      // Karena allProcessed mungkin tidak lengkap (cuma top 5), 
+      // idealnya kita cari di allRates, tapi untuk simpel kita default 0
+      
+      double change = 0.0;
+      try {
+        final found = allProcessed.firstWhere(
+          (element) => element['currency'] == cur, 
+          orElse: () => {}
+        );
+        if (found.isNotEmpty) {
+          change = _parseChange(found['change']);
+        }
+      } catch (_) {}
 
-      final double change = data['change'] ?? 0.0;
       String trend;
       String confidence;
       String text;
@@ -253,23 +160,23 @@ class _AnalysisPageState extends State<AnalysisPage> {
       if (change > 1.0) {
         trend = 'up';
         confidence = 'high';
-        text = 'Strong upward momentum';
-      } else if (change > 0.3) {
+        text = 'Momentum kenaikan kuat';
+      } else if (change > 0.0) { // Sedikit naik
         trend = 'up';
         confidence = 'moderate';
-        text = 'Likely to strengthen';
+        text = 'Cenderung menguat';
       } else if (change < -1.0) {
         trend = 'down';
         confidence = 'high';
-        text = 'Significant downward pressure';
-      } else if (change < -0.3) {
+        text = 'Tekanan jual tinggi';
+      } else if (change < 0.0) { // Sedikit turun
         trend = 'down';
         confidence = 'moderate';
-        text = 'May weaken slightly';
+        text = 'Sedikit melemah';
       } else {
         trend = 'stable';
         confidence = 'high';
-        text = 'Expected to remain stable';
+        text = 'Stabil / Belum ada data signifikan';
       }
 
       preds[cur] = {
@@ -283,6 +190,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
     setState(() => predictions = preds);
   }
 
+  // ==========================================
+  // UI BUILD (Tetap mempertahankan SF Pro Style)
+  // ==========================================
   @override
   Widget build(BuildContext context) {
     return DefaultTextStyle(
@@ -295,12 +205,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontFamily: 'SF Pro',
               fontSize: 20,
             ),
           ),
           backgroundColor: primaryGreen,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh, color: Colors.white),
@@ -312,77 +225,64 @@ class _AnalysisPageState extends State<AnalysisPage> {
           onRefresh: _loadAnalysisData,
           color: primaryGreen,
           child: isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: primaryGreen),
-                )
+              ? const Center(child: CircularProgressIndicator(color: primaryGreen))
               : errorMessage.isNotEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(errorMessage, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadAnalysisData,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryGreen,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header dengan gradient
-                      _buildHeader(),
-                      const SizedBox(height: 24),
+                  ? _buildErrorState()
+                  : SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 24),
+                          
+                          // News
+                          _buildSectionTitle('Market News & Insights', Icons.newspaper),
+                          const SizedBox(height: 12),
+                          _buildMarketNews(),
+                          const SizedBox(height: 24),
 
-                      // 1. MARKET NEWS
-                      _buildSectionTitle(
-                        'Market News & Insights',
-                        Icons.newspaper,
+                          // Top Performers
+                          _buildSectionTitle('Top Performers (24h)', Icons.trending_up),
+                          const SizedBox(height: 12),
+                          _buildTopPerformersSection(),
+                          const SizedBox(height: 24),
+
+                          // Predictions
+                          _buildSectionTitle('Market Predictions', Icons.insights),
+                          const SizedBox(height: 12),
+                          _buildPredictionsSection(),
+                          const SizedBox(height: 24),
+
+                          _buildDisclaimer(),
+                          const SizedBox(height: 16),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      _buildMarketNews(),
-                      const SizedBox(height: 24),
-
-                      // 2. TOP PERFORMERS
-                      _buildSectionTitle(
-                        'Top Performers (24h)',
-                        Icons.trending_up,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildTopPerformersSection(),
-                      const SizedBox(height: 24),
-
-                      // 3. PREDICTIONS
-                      _buildSectionTitle('Market Predictions', Icons.insights),
-                      const SizedBox(height: 12),
-                      _buildPredictionsSection(),
-                      const SizedBox(height: 24),
-
-                      // Disclaimer
-                      _buildDisclaimer(),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
+                    ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 16),
+          Text(errorMessage, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadAnalysisData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
@@ -416,11 +316,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
-                  Icons.analytics_outlined,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: const Icon(Icons.analytics_outlined, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -430,7 +326,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    fontFamily: 'SF Pro',
                   ),
                 ),
               ),
@@ -443,11 +338,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               const SizedBox(width: 6),
               Text(
                 DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.white70,
-                  fontFamily: 'SF Pro',
-                ),
+                style: const TextStyle(fontSize: 13, color: Colors.white70),
               ),
             ],
           ),
@@ -467,7 +358,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
             fontWeight: FontWeight.bold,
             color: primaryGreen,
             fontSize: 17,
-            fontFamily: 'SF Pro',
           ),
         ),
       ],
@@ -489,90 +379,34 @@ class _AnalysisPageState extends State<AnalysisPage> {
       ),
       child: Column(
         children: marketInsights.asMap().entries.map((entry) {
-          final index = entry.key;
-          final insight = entry.value;
-          final isLast = index == marketInsights.length - 1;
-
+          final isLast = entry.key == marketInsights.length - 1;
+          final item = entry.value;
           return Column(
             children: [
-              _newsItem(
-                insight['icon'],
-                insight['color'],
-                insight['title'],
-                insight['subtitle'],
-                insight['time'],
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (item['color'] as Color).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(item['icon'], color: item['color'], size: 20),
+                ),
+                title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(item['subtitle'], style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(item['time'], style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  ],
+                ),
               ),
-              if (!isLast)
-                Divider(height: 1, indent: 68, color: Colors.grey[200]),
+              if (!isLast) const Divider(height: 1, indent: 68),
             ],
           );
         }).toList(),
-      ),
-    );
-  }
-
-  Widget _newsItem(
-    IconData icon,
-    Color color,
-    String title,
-    String subtitle,
-    String time,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    fontFamily: 'SF Pro',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[700],
-                    height: 1.3,
-                    fontFamily: 'SF Pro',
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
-                    Text(
-                      time,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontFamily: 'SF Pro',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -584,21 +418,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     return Column(
       children: [
-        if (topGainers.isNotEmpty) ...[
+        if (topGainers.isNotEmpty)
           _buildPerformerCard('🏆 Top Gainers', topGainers, Colors.green),
-          const SizedBox(height: 16),
-        ],
+        const SizedBox(height: 16),
         if (topLosers.isNotEmpty)
           _buildPerformerCard('📉 Biggest Losers', topLosers, Colors.red),
       ],
     );
   }
 
-  Widget _buildPerformerCard(
-    String title,
-    List<Map<String, dynamic>> data,
-    Color accentColor,
-  ) {
+  Widget _buildPerformerCard(String title, List<Map<String, dynamic>> data, Color accentColor) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -615,27 +444,43 @@ class _AnalysisPageState extends State<AnalysisPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.all(16),
             child: Text(
               title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: accentColor,
-                fontFamily: 'SF Pro',
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: accentColor),
             ),
           ),
           ...data.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;
-            final isLast = index == data.length - 1;
+            // Data sudah dalam format repository
+            final changeStr = item['change']; // "+0.50%"
+            final changeVal = _parseChange(changeStr);
+            final isPositive = changeVal >= 0;
 
             return Column(
               children: [
-                if (index > 0)
-                  Divider(height: 1, indent: 68, color: Colors.grey[200]),
-                _performerItem(item, index + 1, accentColor),
+                if (index > 0) Divider(height: 1, indent: 68, color: Colors.grey[200]),
+                ListTile(
+                  leading: Text(item['flag'], style: const TextStyle(fontSize: 24)),
+                  title: Text(item['currency'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(item['name'], style: const TextStyle(fontSize: 12)),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      changeStr,
+                      style: TextStyle(
+                        color: accentColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             );
           }),
@@ -645,230 +490,44 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Widget _performerItem(
-    Map<String, dynamic> item,
-    int rank,
-    Color accentColor,
-  ) {
-    final change = item['change'] as double;
-    final isPositive = change >= 0;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(
-                '$rank',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: accentColor,
-                  fontSize: 14,
-                  fontFamily: 'SF Pro',
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(item['flag'], style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['currency'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    fontFamily: 'SF Pro',
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item['name'],
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontFamily: 'SF Pro',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                  color: accentColor,
-                  size: 14,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${isPositive ? '+' : ''}${change.toStringAsFixed(2)}%',
-                  style: TextStyle(
-                    color: accentColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    fontFamily: 'SF Pro',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPredictionsSection() {
-    if (predictions.isEmpty) {
-      return _buildEmptyState('Calculating predictions...');
-    }
-
+    if (predictions.isEmpty) return _buildEmptyState('Calculating predictions...');
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 2)),
         ],
       ),
-      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         children: predictions.entries.map((entry) {
-          return _predictionItem(
-            entry.key,
-            currencyNames[entry.key] ?? entry.key,
-            currencyFlags[entry.key] ?? '🏳️',
-            entry.value['trend'],
-            entry.value['text'],
-            entry.value['confidence'],
-          );
+           final currency = entry.key;
+           final data = entry.value;
+           // Ambil flag dari Repo helper jika tidak ada di map
+           final flag = CurrencyRepository.getFlag(currency); 
+           
+           return ListTile(
+             leading: Text(flag, style: const TextStyle(fontSize: 28)),
+             title: Text(currency, style: const TextStyle(fontWeight: FontWeight.bold)),
+             subtitle: Text(data['text'], style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+             trailing: Column(
+               mainAxisAlignment: MainAxisAlignment.center,
+               crossAxisAlignment: CrossAxisAlignment.end,
+               children: [
+                 Icon(
+                   data['trend'] == 'up' ? Icons.trending_up : Icons.trending_down,
+                   color: data['trend'] == 'up' ? Colors.green : (data['trend'] == 'down' ? Colors.red : Colors.grey),
+                 ),
+                 Text(
+                   data['confidence'].toUpperCase(),
+                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                 )
+               ],
+             ),
+           );
         }).toList(),
-      ),
-    );
-  }
-
-  Widget _predictionItem(
-    String currency,
-    String name,
-    String flag,
-    String trend,
-    String text,
-    String confidence,
-  ) {
-    Color trendColor;
-    IconData trendIcon;
-
-    if (trend == 'up') {
-      trendColor = Colors.green;
-      trendIcon = Icons.trending_up;
-    } else if (trend == 'down') {
-      trendColor = Colors.red;
-      trendIcon = Icons.trending_down;
-    } else {
-      trendColor = Colors.grey;
-      trendIcon = Icons.trending_flat;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(flag, style: const TextStyle(fontSize: 32)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      currency,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        fontFamily: 'SF Pro',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: trendColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(trendIcon, size: 12, color: trendColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            trend.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: trendColor,
-                              fontFamily: 'SF Pro',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  text,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[700],
-                    height: 1.3,
-                    fontFamily: 'SF Pro',
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.insights, size: 12, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Confidence: $confidence',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontFamily: 'SF Pro',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -879,27 +538,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Center(
         child: Column(
           children: [
             Icon(Icons.analytics_outlined, size: 52, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                fontFamily: 'SF Pro',
-              ),
-            ),
+            Text(message, style: TextStyle(color: Colors.grey[600])),
           ],
         ),
       ),
@@ -912,22 +557,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
       decoration: BoxDecoration(
         color: Colors.orange.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.withOpacity(0.25), width: 1.5),
+        border: Border.all(color: Colors.orange.withOpacity(0.25)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.info_outline, color: Colors.orange, size: 22),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Text(
-              'Disclaimer: Predictions are for reference only and not financial advice. Always do your own research before making decisions.',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[700],
-                height: 1.4,
-                fontFamily: 'SF Pro',
-              ),
+              'Disclaimer: Prediksi hanya referensi. Selalu lakukan riset sendiri sebelum mengambil keputusan finansial.',
+              style: TextStyle(fontSize: 11, color: Colors.black87),
             ),
           ),
         ],

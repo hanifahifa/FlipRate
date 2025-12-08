@@ -1,15 +1,12 @@
 // ------------------------------------------------------
-// ACTIVITY PAGE - FlipRate (SF Pro Edition)
-// (Realtime Exchange Rate via open.er-api.com)
-// dengan History Manager & Real Data + See More
-// FIXED: Insight logic yang lebih akurat
+// ACTIVITY PAGE - Refactored (Clean Architecture)
+// Menggunakan Repository untuk fetch rate terkini
+// Menggunakan HistoryManager untuk data lokal
 // ------------------------------------------------------
 
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-// Import HistoryManager (sesuaikan path-nya)
+import '../repositories/currency_repository.dart'; // Import Repo
 import '../utils/history_manager.dart';
 
 class ActivityPage extends StatefulWidget {
@@ -38,32 +35,15 @@ class _ActivityPageState extends State<ActivityPage> {
     _loadAllData();
   }
 
-  Future<double> fetchExchangeRate(String from, String to) async {
-    try {
-      final url = Uri.parse('https://open.er-api.com/v6/latest/$from');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['result'] == 'success' && data['rates'][to] != null) {
-          return (data['rates'][to] as num).toDouble();
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching rate $from->$to: $e');
-    }
-    return 0.0;
-  }
-
   Future<void> _loadAllData() async {
     if (!mounted) return;
 
     setState(() => isLoading = true);
 
-    // Load conversion history dari SharedPreferences
+    // 1. Load History (Lokal)
     await _loadConversionHistory();
 
-    // Load recently viewed dari HistoryManager
+    // 2. Load Recently Viewed (Lokal + Fetch Rate Terbaru via Repo)
     await _loadRecentlyViewed();
 
     if (mounted) {
@@ -75,7 +55,6 @@ class _ActivityPageState extends State<ActivityPage> {
   Future<void> _loadConversionHistory() async {
     try {
       final history = await HistoryManager.getConversionHistory();
-
       if (mounted) {
         setState(() {
           conversionHistory = history;
@@ -83,30 +62,24 @@ class _ActivityPageState extends State<ActivityPage> {
       }
     } catch (e) {
       debugPrint('Error loading conversion history: $e');
-      if (mounted) {
-        setState(() {
-          conversionHistory = [];
-        });
-      }
     }
   }
 
-  /// Mengambil recently viewed dari HistoryManager
+  /// Mengambil recently viewed dan update rate terkini via Repository
   Future<void> _loadRecentlyViewed() async {
     try {
       final viewed = await HistoryManager.getRecentlyViewed();
       final List<Map<String, dynamic>> tempViewed = [];
 
-      // Process data tanpa setState di dalam loop
       for (final item in viewed) {
-        if (!mounted) break; // Stop jika widget sudah di-dispose
+        if (!mounted) break;
 
         final from = item['from'] as String;
         final to = item['to'] as String;
         final dt = item['time'] as DateTime;
 
-        // Fetch rate untuk recently viewed
-        final rate = await fetchExchangeRate(from, to);
+        // PERUBAHAN UTAMA: Panggil Repository, bukan HTTP langsung
+        final rate = await CurrencyRepository.getExchangeRate(from: from, to: to);
 
         tempViewed.add({
           'pair': '$from → $to',
@@ -117,7 +90,6 @@ class _ActivityPageState extends State<ActivityPage> {
         });
       }
 
-      // setState hanya sekali setelah semua data selesai di-load
       if (mounted) {
         setState(() {
           recentlyViewed = tempViewed;
@@ -125,34 +97,22 @@ class _ActivityPageState extends State<ActivityPage> {
       }
     } catch (e) {
       debugPrint('Error loading recently viewed: $e');
-      if (mounted) {
-        setState(() {
-          recentlyViewed = [];
-        });
-      }
     }
   }
 
+  // Logic Insight (Client Side Logic - Aman di UI)
   String buildInsight() {
     if (conversionHistory.isEmpty) {
       return 'Start converting currencies to get personalized insights.';
     }
 
-    // Hitung frekuensi semua currency (dari fromCode dan toCode)
     Map<String, int> currencyCount = {};
 
     for (var conversion in conversionHistory) {
       final fromCode = conversion['fromCode'] as String;
-      final toCode = conversion['toCode'] as String;
-
-      // Hitung fromCode
       currencyCount[fromCode] = (currencyCount[fromCode] ?? 0) + 1;
-
-      // Hitung toCode
-      currencyCount[toCode] = (currencyCount[toCode] ?? 0) + 1;
     }
 
-    // Cari currency yang paling sering digunakan
     String mostUsedCurrency = '';
     int maxCount = 0;
 
@@ -163,40 +123,18 @@ class _ActivityPageState extends State<ActivityPage> {
       }
     });
 
-    // Generate insight berdasarkan currency yang paling sering
     if (mostUsedCurrency.isNotEmpty) {
-      // Hitung berapa kali currency ini dikonversi
       final conversionCount = conversionHistory.length;
-
-      if (mostUsedCurrency == 'AED') {
-        return 'You converted $mostUsedCurrency $conversionCount times — UAE Dirham shows consistent activity!';
-      } else if (mostUsedCurrency == 'USD') {
-        return 'You converted USD $conversionCount times — monitor US Dollar volatility for better rates.';
-      } else if (mostUsedCurrency == 'EUR') {
-        return 'You converted EUR $conversionCount times — Euro rates are fluctuating this week.';
-      } else if (mostUsedCurrency == 'IDR') {
-        return 'You converted IDR $conversionCount times — great for managing local transactions!';
-      } else if (mostUsedCurrency == 'JPY') {
-        return 'You converted JPY $conversionCount times — Japanese Yen activity detected.';
-      } else if (mostUsedCurrency == 'AUD') {
-        return 'You converted AUD $conversionCount times — Australian Dollar is your focus currency.';
-      } else {
-        return 'You converted $mostUsedCurrency $conversionCount times — stay updated on its exchange trends.';
-      }
+      return 'Anda sering menukar $mostUsedCurrency ($maxCount kali). Pantau terus pergerakan kurs ini!';
     }
 
-    // Fallback: cek recently viewed (jarang terjadi)
     if (recentlyViewed.isNotEmpty) {
       final recentPair = recentlyViewed.first['pair'] as String;
-      return 'You recently viewed $recentPair rates — check back for updates.';
+      return 'Anda baru saja melihat kurs $recentPair. Cek kembali untuk update terbaru.';
     }
 
-    // Seharusnya tidak pernah sampai sini karena ada conversionHistory
-    return 'Start tracking more currencies to get better insights.';
+    return 'Pantau terus aktivitas tukar mata uang Anda di sini.';
   }
-
-  String formatDateTimeShort(DateTime dt) =>
-      DateFormat('dd MMM yyyy, HH:mm').format(dt);
 
   String relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
@@ -204,27 +142,6 @@ class _ActivityPageState extends State<ActivityPage> {
     if (diff.inHours < 24) return '${diff.inHours} hrs ago';
     if (diff.inDays == 1) return 'yesterday';
     return '${diff.inDays} days ago';
-  }
-
-  String _getFlag(String currencyCode) {
-    final flags = {
-      'USD': '🇺🇸',
-      'EUR': '🇪🇺',
-      'JPY': '🇯🇵',
-      'GBP': '🇬🇧',
-      'AUD': '🇦🇺',
-      'CAD': '🇨🇦',
-      'CHF': '🇨🇭',
-      'CNY': '🇨🇳',
-      'SGD': '🇸🇬',
-      'IDR': '🇮🇩',
-      'MYR': '🇲🇾',
-      'THB': '🇹🇭',
-      'KRW': '🇰🇷',
-      'INR': '🇮🇳',
-      'AED': '🇦🇪',
-    };
-    return flags[currencyCode.toUpperCase()] ?? '🌍';
   }
 
   String _formatRate(double rate) {
@@ -249,7 +166,6 @@ class _ActivityPageState extends State<ActivityPage> {
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontFamily: 'SF Pro',
               fontSize: 20,
             ),
           ),
@@ -269,7 +185,7 @@ class _ActivityPageState extends State<ActivityPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header gradient
+                      // Header Gradient
                       Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
@@ -287,13 +203,10 @@ class _ActivityPageState extends State<ActivityPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              DateFormat(
-                                'EEEE, dd MMMM yyyy',
-                              ).format(DateTime.now()),
+                              DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 13,
-                                fontFamily: 'SF Pro',
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -302,28 +215,23 @@ class _ActivityPageState extends State<ActivityPage> {
                         ),
                       ),
 
-                      // Content area
+                      // Content Area
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildSectionTitle(
-                              'Recently Viewed',
-                              Icons.remove_red_eye_outlined,
-                            ),
+                            // Recently Viewed
+                            _buildSectionTitle('Recently Viewed', Icons.remove_red_eye_outlined),
                             const SizedBox(height: 12),
                             _buildRecentlyViewedSection(),
                             const SizedBox(height: 20),
 
-                            _buildSectionTitle(
-                              'Conversion History',
-                              Icons.history,
-                            ),
+                            // Conversion History
+                            _buildSectionTitle('Conversion History', Icons.history),
                             const SizedBox(height: 12),
                             _buildHistorySection(),
-
-                            // PADDING BOTTOM agar tidak tertutup navbar
+                            
                             const SizedBox(height: 100),
                           ],
                         ),
@@ -360,7 +268,7 @@ class _ActivityPageState extends State<ActivityPage> {
             ),
             child: const Icon(
               Icons.lightbulb_outline,
-              color: Color.fromARGB(255, 255, 242, 0),
+              color: Color.fromARGB(255, 230, 215, 0),
               size: 24,
             ),
           ),
@@ -375,7 +283,6 @@ class _ActivityPageState extends State<ActivityPage> {
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                     color: primaryGreen,
-                    fontFamily: 'SF Pro',
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -385,7 +292,6 @@ class _ActivityPageState extends State<ActivityPage> {
                     fontSize: 13,
                     color: Colors.grey[700],
                     height: 1.4,
-                    fontFamily: 'SF Pro',
                   ),
                 ),
               ],
@@ -407,238 +313,19 @@ class _ActivityPageState extends State<ActivityPage> {
             fontWeight: FontWeight.bold,
             color: primaryGreen,
             fontSize: 17,
-            fontFamily: 'SF Pro',
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildHistorySection() {
-    if (conversionHistory.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(Icons.history, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 12),
-              Text(
-                'No conversion history yet',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                  fontFamily: 'SF Pro',
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Tampilkan 4 item pertama atau semua jika showAllHistory true
-    final displayedHistory = showAllHistory
-        ? conversionHistory
-        : conversionHistory.take(4).toList();
-
-    return Column(
-      children: [
-        ...displayedHistory.asMap().entries.map((entry) {
-          final index = entry.key;
-          final c = entry.value;
-          final isLast = index == displayedHistory.length - 1;
-
-          return Padding(
-            padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {},
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: const BoxDecoration(
-                            color: accentGreen,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.swap_horiz_rounded,
-                            color: primaryGreen,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    '${c['fromAmount']} ${c['fromCode']}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: Colors.black87,
-                                      fontFamily: 'SF Pro',
-                                    ),
-                                  ),
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                    ),
-                                    child: Icon(
-                                      Icons.arrow_forward,
-                                      size: 14,
-                                      color: primaryGreen,
-                                    ),
-                                  ),
-                                  Flexible(
-                                    child: Text(
-                                      '${NumberFormat('#,###', 'id_ID').format(c['toAmount'])} ${c['toCode']}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: primaryGreen,
-                                        fontFamily: 'SF Pro',
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.access_time_rounded,
-                                    size: 12,
-                                    color: Colors.grey[500],
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    relativeTime(c['time'] as DateTime),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                      fontFamily: 'SF Pro',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.grey[400],
-                          size: 24,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-
-        // See More Button untuk History
-        if (conversionHistory.length > 4)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  showAllHistory = !showAllHistory;
-                });
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryGreen.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      showAllHistory
-                          ? 'Show Less'
-                          : 'See More (${conversionHistory.length - 4}+)',
-                      style: const TextStyle(
-                        color: primaryGreen,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        fontFamily: 'SF Pro',
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(
-                      showAllHistory
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      color: primaryGreen,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
 
   Widget _buildRecentlyViewedSection() {
     if (recentlyViewed.isEmpty) {
-      return Container(
-        height: 85,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Center(
-          child: Text(
-            'No recently viewed currencies',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 13,
-              fontFamily: 'SF Pro',
-            ),
-          ),
-        ),
-      );
+      return _buildEmptyState('No recently viewed currencies');
     }
 
-    // Tampilkan 3 item pertama atau semua jika showAllRecentlyViewed true
-    final displayedViewed = showAllRecentlyViewed
-        ? recentlyViewed
+    final displayedViewed = showAllRecentlyViewed 
+        ? recentlyViewed 
         : recentlyViewed.take(3).toList();
 
     return Column(
@@ -647,74 +334,21 @@ class _ActivityPageState extends State<ActivityPage> {
           height: 85,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount:
-                displayedViewed.length +
+            itemCount: displayedViewed.length + 
                 (recentlyViewed.length > 3 && !showAllRecentlyViewed ? 1 : 0),
             itemBuilder: (context, index) {
-              // Show "See More" button as last item jika ada lebih dari 3
-              if (!showAllRecentlyViewed &&
-                  recentlyViewed.length > 3 &&
-                  index == 3) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 0),
-                  child: InkWell(
-                    onTap: () {
-                      if (mounted) {
-                        setState(() {
-                          showAllRecentlyViewed = true;
-                        });
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      width: 80,
-                      decoration: BoxDecoration(
-                        color: primaryGreen.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: primaryGreen.withOpacity(0.3),
-                        ),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.arrow_forward,
-                            color: primaryGreen,
-                            size: 24,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'See\nMore',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: primaryGreen,
-                              fontFamily: 'SF Pro',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
+              if (!showAllRecentlyViewed && recentlyViewed.length > 3 && index == 3) {
+                return _buildSeeMoreButton(() {
+                  setState(() => showAllRecentlyViewed = true);
+                });
               }
 
               final r = displayedViewed[index];
-              final pair = r['pair'] as String;
-              final when = r['when'] as DateTime;
-              final from = r['from'] as String;
-              final rate = r['rate'] as double;
+              // Mengambil flag dari Repo helper
+              final flag = CurrencyRepository.getFlag(r['from']); 
 
               return Padding(
-                padding: EdgeInsets.only(
-                  right:
-                      index < displayedViewed.length - 1 ||
-                          (!showAllRecentlyViewed && recentlyViewed.length > 3)
-                      ? 10
-                      : 0,
-                ),
+                padding: const EdgeInsets.only(right: 10),
                 child: Container(
                   width: 150,
                   decoration: BoxDecoration(
@@ -728,70 +362,33 @@ class _ActivityPageState extends State<ActivityPage> {
                       ),
                     ],
                   ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {},
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            _getFlag(from),
-                            style: const TextStyle(fontSize: 20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: [
+                        Text(flag, style: const TextStyle(fontSize: 24)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                r['pair'],
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              Text(
+                                r['rate'] > 0 ? _formatRate(r['rate']) : 'Loading...',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              Text(
+                                relativeTime(r['when']),
+                                style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  pair,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                    fontFamily: 'SF Pro',
-                                  ),
-                                ),
-                                Text(
-                                  rate > 0 ? _formatRate(rate) : 'Loading...',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black87,
-                                    fontFamily: 'SF Pro',
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.schedule_rounded,
-                                      size: 11,
-                                      color: Colors.black54,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Flexible(
-                                      child: Text(
-                                        relativeTime(when),
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.black54,
-                                          fontFamily: 'SF Pro',
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -799,51 +396,152 @@ class _ActivityPageState extends State<ActivityPage> {
             },
           ),
         ),
-
-        // Show Less Button untuk Recently Viewed (jika sudah expand)
         if (showAllRecentlyViewed && recentlyViewed.length > 3)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: InkWell(
-              onTap: () {
-                if (mounted) {
-                  setState(() {
-                    showAllRecentlyViewed = false;
-                  });
-                }
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryGreen.withOpacity(0.3)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Show Less',
-                      style: TextStyle(
-                        color: primaryGreen,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        fontFamily: 'SF Pro',
-                      ),
+          _buildShowLessButton(() {
+            setState(() => showAllRecentlyViewed = false);
+          }),
+      ],
+    );
+  }
+
+  Widget _buildHistorySection() {
+    if (conversionHistory.isEmpty) {
+      return _buildEmptyState('No conversion history yet');
+    }
+
+    final displayedHistory = showAllHistory 
+        ? conversionHistory 
+        : conversionHistory.take(4).toList();
+
+    return Column(
+      children: [
+        ...displayedHistory.asMap().entries.map((entry) {
+          final c = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2)),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: const BoxDecoration(color: accentGreen, shape: BoxShape.circle),
+                    child: const Icon(Icons.swap_horiz_rounded, color: primaryGreen),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '${c['fromAmount']} ${c['fromCode']}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 6),
+                              child: Icon(Icons.arrow_forward, size: 14, color: primaryGreen),
+                            ),
+                            Flexible(
+                              child: Text(
+                                '${NumberFormat('#,###.##', 'id_ID').format(c['toAmount'])} ${c['toCode']}',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: primaryGreen),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time_rounded, size: 11, color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Text(
+                              relativeTime(c['time']),
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 6),
-                    Icon(
-                      Icons.keyboard_arrow_up,
-                      color: primaryGreen,
-                      size: 20,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (conversionHistory.length > 4)
+          InkWell(
+            onTap: () => setState(() => showAllHistory = !showAllHistory),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    showAllHistory ? 'Show Less' : 'See More',
+                    style: const TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
+                  ),
+                  Icon(showAllHistory ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: primaryGreen),
+                ],
               ),
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState(String msg) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Center(child: Text(msg, style: TextStyle(color: Colors.grey[600]))),
+    );
+  }
+
+  Widget _buildSeeMoreButton(VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        width: 80,
+        margin: const EdgeInsets.only(right: 10),
+        decoration: BoxDecoration(
+          color: primaryGreen.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: primaryGreen.withOpacity(0.3)),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.arrow_forward, color: primaryGreen),
+            Text('See\nMore', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryGreen)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShowLessButton(VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Show Less', style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold)),
+            const Icon(Icons.keyboard_arrow_up, color: primaryGreen),
+          ],
+        ),
+      ),
     );
   }
 }
