@@ -17,7 +17,7 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  static const Color primaryGreen = Color(0xFF2E7D32);
+  static const Color primaryGreen = Color(0xFF043915);
   static const Color lightGreen = Color(0xFFF1F8E9);
   static const Color accentGreen = Color(0xFFDDE8D4);
 
@@ -385,6 +385,7 @@ class _NotificationPageState extends State<NotificationPage> {
       child: Scaffold(
         backgroundColor: lightGreen,
         appBar: AppBar(
+          iconTheme: const IconThemeData(color: Colors.white),
           title: const Text(
             'Notifications',
             style: TextStyle(
@@ -416,19 +417,19 @@ class _NotificationPageState extends State<NotificationPage> {
                 child: CircularProgressIndicator(color: primaryGreen),
               )
             : notifications.isEmpty
-                ? _buildEmptyState()
-                : RefreshIndicator(
-                    onRefresh: _initializeData,
-                    color: primaryGreen,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: notifications.length,
-                      itemBuilder: (context, index) {
-                        final notif = notifications[index];
-                        return _buildNotificationCard(notif, index);
-                      },
-                    ),
-                  ),
+            ? _buildEmptyState()
+            : RefreshIndicator(
+                onRefresh: _initializeData,
+                color: primaryGreen,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: notifications.length,
+                  itemBuilder: (context, index) {
+                    final notif = notifications[index];
+                    return _buildNotificationCard(notif, index);
+                  },
+                ),
+              ),
       ),
     );
   }
@@ -687,10 +688,7 @@ class _NotificationPageState extends State<NotificationPage> {
                 color: Colors.red,
                 shape: BoxShape.circle,
               ),
-              constraints: const BoxConstraints(
-                minWidth: 18,
-                minHeight: 18,
-              ),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
               child: Text(
                 unreadCount > 9 ? '9+' : '$unreadCount',
                 style: const TextStyle(

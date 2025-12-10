@@ -17,7 +17,7 @@ class ActivityPage extends StatefulWidget {
 }
 
 class _ActivityPageState extends State<ActivityPage> {
-  static const Color primaryGreen = Color(0xFF2E7D32);
+  static const Color primaryGreen = Color(0xFF043915);
   static const Color lightGreen = Color(0xFFF1F8E9);
   static const Color accentGreen = Color(0xFFDDE8D4);
 
@@ -79,7 +79,10 @@ class _ActivityPageState extends State<ActivityPage> {
         final dt = item['time'] as DateTime;
 
         // PERUBAHAN UTAMA: Panggil Repository, bukan HTTP langsung
-        final rate = await CurrencyRepository.getExchangeRate(from: from, to: to);
+        final rate = await CurrencyRepository.getExchangeRate(
+          from: from,
+          to: to,
+        );
 
         tempViewed.add({
           'pair': '$from → $to',
@@ -124,7 +127,7 @@ class _ActivityPageState extends State<ActivityPage> {
     });
 
     if (mostUsedCurrency.isNotEmpty) {
-      final conversionCount = conversionHistory.length;
+      //final conversionCount = conversionHistory.length;
       return 'Anda sering menukar $mostUsedCurrency ($maxCount kali). Pantau terus pergerakan kurs ini!';
     }
 
@@ -169,7 +172,7 @@ class _ActivityPageState extends State<ActivityPage> {
               fontSize: 20,
             ),
           ),
-          backgroundColor: primaryGreen,
+          backgroundColor: Color(0xFF043915),
           elevation: 0,
           centerTitle: false,
         ),
@@ -203,7 +206,9 @@ class _ActivityPageState extends State<ActivityPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
+                              DateFormat(
+                                'EEEE, dd MMMM yyyy',
+                              ).format(DateTime.now()),
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 13,
@@ -222,16 +227,22 @@ class _ActivityPageState extends State<ActivityPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Recently Viewed
-                            _buildSectionTitle('Recently Viewed', Icons.remove_red_eye_outlined),
+                            _buildSectionTitle(
+                              'Recently Viewed',
+                              Icons.remove_red_eye_outlined,
+                            ),
                             const SizedBox(height: 12),
                             _buildRecentlyViewedSection(),
                             const SizedBox(height: 20),
 
                             // Conversion History
-                            _buildSectionTitle('Conversion History', Icons.history),
+                            _buildSectionTitle(
+                              'Conversion History',
+                              Icons.history,
+                            ),
                             const SizedBox(height: 12),
                             _buildHistorySection(),
-                            
+
                             const SizedBox(height: 100),
                           ],
                         ),
@@ -324,8 +335,8 @@ class _ActivityPageState extends State<ActivityPage> {
       return _buildEmptyState('No recently viewed currencies');
     }
 
-    final displayedViewed = showAllRecentlyViewed 
-        ? recentlyViewed 
+    final displayedViewed = showAllRecentlyViewed
+        ? recentlyViewed
         : recentlyViewed.take(3).toList();
 
     return Column(
@@ -334,10 +345,13 @@ class _ActivityPageState extends State<ActivityPage> {
           height: 85,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: displayedViewed.length + 
+            itemCount:
+                displayedViewed.length +
                 (recentlyViewed.length > 3 && !showAllRecentlyViewed ? 1 : 0),
             itemBuilder: (context, index) {
-              if (!showAllRecentlyViewed && recentlyViewed.length > 3 && index == 3) {
+              if (!showAllRecentlyViewed &&
+                  recentlyViewed.length > 3 &&
+                  index == 3) {
                 return _buildSeeMoreButton(() {
                   setState(() => showAllRecentlyViewed = true);
                 });
@@ -345,7 +359,7 @@ class _ActivityPageState extends State<ActivityPage> {
 
               final r = displayedViewed[index];
               // Mengambil flag dari Repo helper
-              final flag = CurrencyRepository.getFlag(r['from']); 
+              final flag = CurrencyRepository.getFlag(r['from']);
 
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
@@ -375,15 +389,23 @@ class _ActivityPageState extends State<ActivityPage> {
                             children: [
                               Text(
                                 r['pair'],
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                               Text(
-                                r['rate'] > 0 ? _formatRate(r['rate']) : 'Loading...',
+                                r['rate'] > 0
+                                    ? _formatRate(r['rate'])
+                                    : 'Loading...',
                                 style: const TextStyle(fontSize: 12),
                               ),
                               Text(
                                 relativeTime(r['when']),
-                                style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[700],
+                                ),
                               ),
                             ],
                           ),
@@ -409,8 +431,8 @@ class _ActivityPageState extends State<ActivityPage> {
       return _buildEmptyState('No conversion history yet');
     }
 
-    final displayedHistory = showAllHistory 
-        ? conversionHistory 
+    final displayedHistory = showAllHistory
+        ? conversionHistory
         : conversionHistory.take(4).toList();
 
     return Column(
@@ -424,16 +446,27 @@ class _ActivityPageState extends State<ActivityPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2)),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
               ),
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Container(
-                    width: 48, height: 48,
-                    decoration: const BoxDecoration(color: accentGreen, shape: BoxShape.circle),
-                    child: const Icon(Icons.swap_horiz_rounded, color: primaryGreen),
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: accentGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.swap_horiz_rounded,
+                      color: primaryGreen,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -444,16 +477,27 @@ class _ActivityPageState extends State<ActivityPage> {
                           children: [
                             Text(
                               '${c['fromAmount']} ${c['fromCode']}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
                             ),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 6),
-                              child: Icon(Icons.arrow_forward, size: 14, color: primaryGreen),
+                              child: Icon(
+                                Icons.arrow_forward,
+                                size: 14,
+                                color: primaryGreen,
+                              ),
                             ),
                             Flexible(
                               child: Text(
                                 '${NumberFormat('#,###.##', 'id_ID').format(c['toAmount'])} ${c['toCode']}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: primaryGreen),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: primaryGreen,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -462,11 +506,18 @@ class _ActivityPageState extends State<ActivityPage> {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            Icon(Icons.access_time_rounded, size: 11, color: Colors.grey[500]),
+                            Icon(
+                              Icons.access_time_rounded,
+                              size: 11,
+                              color: Colors.grey[500],
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               relativeTime(c['time']),
-                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
                             ),
                           ],
                         ),
@@ -488,9 +539,17 @@ class _ActivityPageState extends State<ActivityPage> {
                 children: [
                   Text(
                     showAllHistory ? 'Show Less' : 'See More',
-                    style: const TextStyle(color: primaryGreen, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: primaryGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  Icon(showAllHistory ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: primaryGreen),
+                  Icon(
+                    showAllHistory
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: primaryGreen,
+                  ),
                 ],
               ),
             ),
@@ -502,8 +561,13 @@ class _ActivityPageState extends State<ActivityPage> {
   Widget _buildEmptyState(String msg) {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-      child: Center(child: Text(msg, style: TextStyle(color: Colors.grey[600]))),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Center(
+        child: Text(msg, style: TextStyle(color: Colors.grey[600])),
+      ),
     );
   }
 
@@ -522,7 +586,15 @@ class _ActivityPageState extends State<ActivityPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.arrow_forward, color: primaryGreen),
-            Text('See\nMore', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryGreen)),
+            Text(
+              'See\nMore',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: primaryGreen,
+              ),
+            ),
           ],
         ),
       ),
@@ -537,7 +609,13 @@ class _ActivityPageState extends State<ActivityPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Show Less', style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold)),
+            const Text(
+              'Show Less',
+              style: TextStyle(
+                color: primaryGreen,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const Icon(Icons.keyboard_arrow_up, color: primaryGreen),
           ],
         ),

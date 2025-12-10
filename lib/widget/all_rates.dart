@@ -1,13 +1,27 @@
 // ------------------------------------------------------
-// ALL RATES WIDGET - Refactored (Using Repository)
-// Sesuai Spesifikasi: UI terpisah dari Logic Data
+// ALL RATES WIDGET - With Centralized Colors
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../repositories/currency_repository.dart'; // Import Repository
+import '../repositories/currency_repository.dart';
 import '../pages/addPages/detail_rate_page.dart';
 import '../utils/history_manager.dart';
+
+// =====================================================
+// APP COLORS - Ubah warna primary di sini untuk ganti semua tema!
+// =====================================================
+class AppColors {
+  static const Color primary = Color(0xFF043915);        // 👈 UBAH DI SINI!
+  static const Color primaryLight = Color(0xFF2E7D32);
+  static const Color background = Color(0xFFF1F8E9);
+  static const Color backgroundWhite = Colors.white;
+  static const Color textWhite = Colors.white;
+  static const Color textSecondary = Color(0xFF757575);
+  static const Color textPrimary = Color(0xFF043915);
+  static const Color rateUp = Color(0xFF4CAF50);
+  static const Color rateDown = Color(0xFFE53935);
+}
 
 class AllRatesWidget extends StatefulWidget {
   const AllRatesWidget({super.key});
@@ -17,11 +31,8 @@ class AllRatesWidget extends StatefulWidget {
 }
 
 class _AllRatesWidgetState extends State<AllRatesWidget> {
-  // State Data
   List<Map<String, dynamic>> allRates = [];
   List<Map<String, dynamic>> filteredRates = [];
-
-  // State UI
   bool isLoading = true;
   String errorMessage = '';
   final _searchController = TextEditingController();
@@ -29,7 +40,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
   @override
   void initState() {
     super.initState();
-    _fetchRates(); // Panggil fungsi fetch yang baru
+    _fetchRates();
     _searchController.addListener(_filterRates);
   }
 
@@ -39,9 +50,6 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
     super.dispose();
   }
 
-  // =====================================================
-  // FETCH DATA VIA REPOSITORY (Sesuai Ketentuan)
-  // =====================================================
   Future<void> _fetchRates() async {
     setState(() {
       isLoading = true;
@@ -49,10 +57,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
     });
 
     try {
-      // Panggil Repository alih-alih HTTP langsung
-      // Logic backend, perhitungan IDR, dan % perubahan sudah diurus di sana
       final rates = await CurrencyRepository.getAllRates();
-
       if (mounted) {
         setState(() {
           allRates = rates;
@@ -71,9 +76,6 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
     }
   }
 
-  // =====================================================
-  // FILTER LOGIC (Tetap di UI karena ini logic tampilan)
-  // =====================================================
   void _filterRates() {
     final query = _searchController.text.toLowerCase();
     setState(() {
@@ -87,24 +89,21 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
 
   String _fmt(double n) => NumberFormat('#,###.##').format(n);
 
-  // =====================================================
-  // UI BUILD
-  // =====================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('All Rates', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF2E7D32),
+        title: Text('All Rates', style: TextStyle(color: AppColors.textWhite)),
+        backgroundColor: AppColors.primary,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: AppColors.textWhite),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: _fetchRates, // Tarik untuk refresh via Repo
-        color: const Color(0xFF2E7D32),
+        onRefresh: _fetchRates,
+        color: AppColors.primary,
         child: Column(
           children: [
             // Search Bar
@@ -113,13 +112,10 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Color(0xFF2E7D32),
-                  ),
+                  prefixIcon: Icon(Icons.search, color: AppColors.primary),
                   hintText: 'Cari mata uang (USD, Euro...)',
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: AppColors.backgroundWhite,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -137,29 +133,31 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
             // Content List
             Expanded(
               child: isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF2E7D32),
-                      ),
+                  ? Center(
+                      child: CircularProgressIndicator(color: AppColors.primary),
                     )
                   : errorMessage.isNotEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.error_outline,
                             size: 48,
-                            color: Colors.grey,
+                            color: AppColors.textSecondary,
                           ),
                           const SizedBox(height: 16),
-                          Text(errorMessage, textAlign: TextAlign.center),
+                          Text(
+                            errorMessage,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _fetchRates,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E7D32),
-                              foregroundColor: Colors.white,
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.textWhite,
                             ),
                             child: const Text("Coba Lagi"),
                           ),
@@ -167,7 +165,12 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                       ),
                     )
                   : filteredRates.isEmpty
-                  ? const Center(child: Text('Data tidak ditemukan'))
+                  ? Center(
+                      child: Text(
+                        'Data tidak ditemukan',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    )
                   : ListView.builder(
                       itemCount: filteredRates.length,
                       itemBuilder: (context, i) =>
@@ -180,27 +183,13 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
     );
   }
 
-  // =====================================================
-  // ITEM CARD
-  // =====================================================
   Widget _buildCard(Map<String, dynamic> r, BuildContext context) {
-    // Logic menentukan warna & arah panah sudah ada di data Repo ('isUp')
-    // Tapi kita bisa cek manual juga dari string change
     final isUp = (r['isUp'] as bool?) ?? r['change'].toString().startsWith('+');
     final changeText = r['change'].toString();
 
-    // Data format dari Repository:
-    // {
-    //   'currency': 'USD',
-    //   'name': 'US Dollar',
-    //   'flag': '🇺🇸',
-    //   'rate': 15000.0,
-    //   'change': '+0.50%', // Sudah String terformat
-    //   'isUp': true
-    // }
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: AppColors.backgroundWhite,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         onTap: () {
@@ -213,17 +202,23 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
         leading: Text(r['flag'], style: const TextStyle(fontSize: 28)),
         title: Text(
           r['currency'],
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
-        subtitle: Text(r['name']),
+        subtitle: Text(
+          r['name'],
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
               'Rp${_fmt(r['rate'])}',
-              style: const TextStyle(
-                color: Color(0xFF2E7D32),
+              style: TextStyle(
+                color: AppColors.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -233,13 +228,13 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                 Icon(
                   isUp ? Icons.arrow_upward : Icons.arrow_downward,
                   size: 12,
-                  color: isUp ? Colors.green : Colors.red,
+                  color: isUp ? AppColors.rateUp : AppColors.rateDown,
                 ),
                 const SizedBox(width: 2),
                 Text(
                   changeText,
                   style: TextStyle(
-                    color: isUp ? Colors.green : Colors.red,
+                    color: isUp ? AppColors.rateUp : AppColors.rateDown,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),

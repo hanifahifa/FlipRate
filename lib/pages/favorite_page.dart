@@ -17,7 +17,7 @@ class FavoritePage extends StatefulWidget {
 }
 
 class _FavoritePageState extends State<FavoritePage> {
-  static const Color primaryGreen = Color(0xFF2E7D32);
+  static const Color primaryGreen = Color(0xFF043915);
   static const Color lightGreen = Color(0xFFF1F8E9);
   static const Color accentGreen = Color(0xFFDDE8D4);
 
@@ -87,7 +87,9 @@ class _FavoritePageState extends State<FavoritePage> {
             duration: const Duration(seconds: 2),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -132,7 +134,8 @@ class _FavoritePageState extends State<FavoritePage> {
     // Hitung rata-rata perubahan
     final upCount = favorites.where((f) => f['isUp'] == true).length;
     final avgChange = favorites.isNotEmpty
-        ? favorites.fold(0.0, (sum, f) => sum + _parseChange(f['change'])) / favorites.length
+        ? favorites.fold(0.0, (sum, f) => sum + _parseChange(f['change'])) /
+              favorites.length
         : 0.0;
 
     return Scaffold(
@@ -149,12 +152,6 @@ class _FavoritePageState extends State<FavoritePage> {
         backgroundColor: primaryGreen,
         elevation: 0,
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadFavorites,
-          ),
-        ],
       ),
 
       body: RefreshIndicator(
@@ -184,7 +181,9 @@ class _FavoritePageState extends State<FavoritePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
+                            DateFormat(
+                              'EEEE, dd MMMM yyyy',
+                            ).format(DateTime.now()),
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 13,
@@ -203,16 +202,22 @@ class _FavoritePageState extends State<FavoritePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (favorites.isNotEmpty) ...[
-                            _buildSectionTitle('Headlines Today', Icons.analytics_outlined),
+                            _buildSectionTitle(
+                              'Headlines Today',
+                              Icons.analytics_outlined,
+                            ),
                             const SizedBox(height: 12),
                             _buildSummaryCard(upCount, avgChange),
                             const SizedBox(height: 20),
                           ],
 
-                          _buildSectionTitle('Your Favorite Currencies', Icons.star_rounded),
+                          _buildSectionTitle(
+                            'Your Favorite Currencies',
+                            Icons.star_rounded,
+                          ),
                           const SizedBox(height: 12),
                           _buildFavoritesList(),
-                          
+
                           const SizedBox(height: 100), // Bottom padding
                         ],
                       ),
@@ -323,7 +328,11 @@ class _FavoritePageState extends State<FavoritePage> {
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.trending_up, color: Colors.green, size: 20),
+                child: const Icon(
+                  Icons.trending_up,
+                  color: Colors.green,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -356,7 +365,11 @@ class _FavoritePageState extends State<FavoritePage> {
                   color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.analytics_outlined, color: Colors.blue, size: 20),
+                child: const Icon(
+                  Icons.analytics_outlined,
+                  color: Colors.blue,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -403,7 +416,11 @@ class _FavoritePageState extends State<FavoritePage> {
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.star_border_rounded, size: 48, color: Colors.grey[400]),
+              Icon(
+                Icons.star_border_rounded,
+                size: 48,
+                color: Colors.grey[400],
+              ),
               const SizedBox(height: 12),
               Text(
                 'No favorites yet',
@@ -445,7 +462,8 @@ class _FavoritePageState extends State<FavoritePage> {
           return Column(
             children: [
               _favoriteItem(f),
-              if (!isLast) Divider(height: 1, indent: 72, color: Colors.grey[200]),
+              if (!isLast)
+                Divider(height: 1, indent: 72, color: Colors.grey[200]),
             ],
           );
         }).toList(),
@@ -473,7 +491,9 @@ class _FavoritePageState extends State<FavoritePage> {
           final confirm = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: const Text('Remove from Favorites'),
               content: Text('Remove ${f['currency']} from your favorites?'),
               actions: [
@@ -499,7 +519,8 @@ class _FavoritePageState extends State<FavoritePage> {
           child: Row(
             children: [
               Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: Colors.amber.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -515,7 +536,10 @@ class _FavoritePageState extends State<FavoritePage> {
                   children: [
                     Text(
                       f['currency'],
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -526,7 +550,10 @@ class _FavoritePageState extends State<FavoritePage> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -538,7 +565,11 @@ class _FavoritePageState extends State<FavoritePage> {
                     const SizedBox(width: 4),
                     Text(
                       changeStr,
-                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),

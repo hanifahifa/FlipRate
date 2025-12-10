@@ -1,6 +1,5 @@
 // ------------------------------------------------------
-// DASHBOARD PAGE - FlipRate (Integrated with Backend)
-// iPhone-Style Professional UI + Backend Logic
+// DASHBOARD PAGE - FlipRate (Fixed: Detailed Chart Labels)
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
@@ -12,6 +11,8 @@ import '../widget/all_rates.dart';
 import '../widget/convert.dart';
 import '../widget/analysis.dart';
 import '../widget/notification.dart';
+import 'dart:ui'; // Untuk BackdropFilter
+import 'addPages/detail_rate_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -22,7 +23,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   // UI State
-  ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
   bool _isScrolled = false;
 
   // Data State
@@ -64,7 +65,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // FETCH POPULAR RATES (Using Repository)
+  // FETCH POPULAR RATES
   // ============================================
   Future<void> _fetchPopularRates() async {
     setState(() {
@@ -83,7 +84,6 @@ class _DashboardPageState extends State<DashboardPage> {
             'pair': '${rate['currency']} → IDR',
             'currency': rate['currency'],
             'value': rate['rate'] as double,
-            // 'change' di sini SUDAH STRING (misal: "+0.20%") dari Repo
             'change': rate['change'],
             'isUpValue': rate['isUp'] as bool,
             'flag': rate['flag'],
@@ -101,7 +101,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // FETCH HISTORICAL DATA (3 Days for Chart)
+  // FETCH HISTORICAL DATA (3 Days)
   // ============================================
   Future<void> _fetchHistoricalData() async {
     setState(() {
@@ -110,16 +110,12 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     try {
-      print('🔄 Dashboard: Fetching historical data...');
-
       final now = DateTime.now();
       List<FlSpot> spots = [];
       List<String> dates = [];
 
-      // Fetch data for the last 4 days (including today)
       for (int i = 3; i >= 0; i--) {
         final targetDate = now.subtract(Duration(days: i));
-        final formattedDate = DateFormat('yyyy-MM-dd').format(targetDate);
 
         try {
           final historicalRates =
@@ -128,15 +124,13 @@ class _DashboardPageState extends State<DashboardPage> {
                 daysAgo: i,
               );
 
-          final idrRate = historicalRates['IDR'] ?? 15700.0;
+          final idrRate =
+              historicalRates['IDR'] ?? 15700.0; // Fallback jika null
 
           spots.add(FlSpot((3 - i).toDouble(), idrRate));
           dates.add(DateFormat('d MMM').format(targetDate));
-
-          print('✅ Got rate for $formattedDate: $idrRate');
         } catch (e) {
-          print('⚠️ Failed to fetch data for $formattedDate: $e');
-          // Use fallback data for this day
+          // Fallback data dummy jika fetch gagal per hari
           spots.add(FlSpot((3 - i).toDouble(), 15700.0));
           dates.add(DateFormat('d MMM').format(targetDate));
         }
@@ -147,28 +141,11 @@ class _DashboardPageState extends State<DashboardPage> {
         chartDates = dates;
         isChartLoading = false;
       });
-
-      print('✅ Dashboard: Chart data loaded (${chartData.length} points)');
     } catch (e) {
       print('❌ Dashboard Chart Error: $e');
-
-      // Fallback data
-      final now = DateTime.now();
       setState(() {
-        chartData = [
-          FlSpot(0, 15800.0),
-          FlSpot(1, 15720.0),
-          FlSpot(2, 15650.0),
-          FlSpot(3, 15700.0),
-        ];
-        chartDates = [
-          DateFormat('d MMM').format(now.subtract(const Duration(days: 3))),
-          DateFormat('d MMM').format(now.subtract(const Duration(days: 2))),
-          DateFormat('d MMM').format(now.subtract(const Duration(days: 1))),
-          DateFormat('d MMM').format(now),
-        ];
         isChartLoading = false;
-        chartErrorMessage = 'Using estimated data';
+        chartErrorMessage = 'Chart data unavailable';
       });
     }
   }
@@ -192,7 +169,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // HELPER: GET CHART INSIGHT
+  // HELPER: GET CHART INSIGHT (FIXED LOGIC)
   // ============================================
   String _getChartInsight() {
     if (chartData.length < 2) return 'Insufficient data for trend analysis';
@@ -206,16 +183,18 @@ class _DashboardPageState extends State<DashboardPage> {
     String emoji;
 
     if (difference > 0) {
-      direction = 'strengthened';
-      emoji = '📈';
-    } else if (difference < 0) {
+      // Harga NAIK (15k -> 16k) = Rupiah MELEMAH
       direction = 'weakened';
-      emoji = '📉';
+      emoji = '📉'; // Panah turun (Nilai Rupiah turun)
+    } else if (difference < 0) {
+      // Harga TURUN (16k -> 15k) = Rupiah MENGUAT
+      direction = 'strengthened';
+      emoji = '📈'; // Panah naik (Nilai Rupiah naik)
     } else {
       return '➡️ IDR remains stable over the past 3 days';
     }
 
-    return '$emoji IDR has $direction by ${percentageChange.abs().toStringAsFixed(2)}% (Rp${difference.abs().toStringAsFixed(0)}) in 3 days';
+    return '$emoji IDR has $direction by ${percentageChange.abs().toStringAsFixed(2)}% (Rp${difference.abs().toStringAsFixed(0)}) in last few days';
   }
 
   // ============================================
@@ -231,133 +210,136 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F8E9),
-      body: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Modern iOS-style App Bar
-          SliverAppBar(
-            expandedHeight: 120,
-            floating: false,
-            pinned: true,
-            stretch: true,
-            backgroundColor: const Color(0xFF388E3C),
-            title: AnimatedOpacity(
-              opacity: _isScrolled ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: const Text(
-                'FlipRate',
-                style: TextStyle(
-                  fontFamily: 'SF Pro',
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 17,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF388E3C), Color(0xFF2E7D32)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        AnimatedOpacity(
-                          opacity: _isScrolled ? 0.0 : 1.0,
-                          duration: const Duration(milliseconds: 200),
-                          child: const Text(
-                            'FlipRate',
-                            style: TextStyle(
-                              fontFamily: 'SF Pro',
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 32,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        AnimatedOpacity(
-                          opacity: _isScrolled ? 0.0 : 1.0,
-                          duration: const Duration(milliseconds: 200),
-                          child: Text(
-                            today,
-                            style: const TextStyle(
-                              fontFamily: 'SF Pro',
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 12, top: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NotificationPage(),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+      // 1. RefreshIndicator dipindah ke sini (Membungkus CustomScrollView)
+      body: RefreshIndicator(
+        onRefresh: _refreshAll,
+        color: const Color(0xFF2E7D32),
+        backgroundColor: Colors.white,
+        displacement:
+            60, // Jarak indikator dari atas agar tidak tertutup AppBar
+        edgeOffset: 120, // Sesuaikan dengan tinggi Expanded AppBar
 
-          // Content
-          SliverToBoxAdapter(
-            child: RefreshIndicator(
-              onRefresh: _refreshAll,
-              color: const Color(0xFF2E7D32),
+        child: CustomScrollView(
+          controller: _scrollController,
+          // 2. Tambahkan physics ini agar bisa ditarik walau konten sedikit
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          slivers: [
+            // AppBar
+            SliverAppBar(
+              expandedHeight: 120,
+              floating: false,
+              pinned: true,
+              stretch: true,
+              backgroundColor: const Color(0xFF043915),
+              title: AnimatedOpacity(
+                opacity: _isScrolled ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: const Text(
+                  'FlipRate',
+                  style: TextStyle(
+                    fontFamily: 'SF Pro',
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF043915), Color(0xFF2E7D32)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          AnimatedOpacity(
+                            opacity: _isScrolled ? 0.0 : 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Text(
+                              'FlipRate',
+                              style: TextStyle(
+                                fontFamily: 'SF Pro',
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 32,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          AnimatedOpacity(
+                            opacity: _isScrolled ? 0.0 : 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Text(
+                              today,
+                              style: const TextStyle(
+                                fontFamily: 'SF Pro',
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                Container(
+                  margin: const EdgeInsets.only(right: 12, top: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            // Content Body
+            SliverToBoxAdapter(
+              // 3. RefreshIndicator di sini DIHAPUS, langsung ke Padding/Column
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Chart Card
                     _chartCard(),
                     const SizedBox(height: 20),
-
-                    // Quick Access Card
                     _quickAccessCard(context),
                     const SizedBox(height: 20),
-
-                    // Popular Rates Card
                     _popularRatesCard(),
                     const SizedBox(height: 24),
-
-                    // Footer
                     Center(
                       child: Text(
                         '© 2025 FlipRate – Smart Currency Converter',
@@ -373,14 +355,14 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // ============================================
-  // CHART CARD - iPhone Style
+  // WIDGET: CHART CARD
   // ============================================
   Widget _chartCard() {
     return Container(
@@ -416,7 +398,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    '3 Days Trend',
+                    'Last Few Days Trend',
                     style: TextStyle(
                       fontSize: 13,
                       color: Color(0xFF8E8E93),
@@ -447,7 +429,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
             ],
           ),
+
           const SizedBox(height: 24),
+
           SizedBox(
             height: 200,
             child: isChartLoading
@@ -458,74 +442,57 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   )
                 : chartData.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.insert_chart_outlined_rounded,
-                          color: Colors.grey[300],
-                          size: 48,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          chartErrorMessage.isEmpty
-                              ? 'No chart data available'
-                              : chartErrorMessage,
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
+                ? const Center(child: Text('No data'))
                 : _buildChart(),
           ),
-          if (chartErrorMessage.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    chartErrorMessage,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+
           const SizedBox(height: 16),
-          Text(
-            isChartLoading
-                ? 'Loading historical data...'
-                : chartData.isNotEmpty
-                ? _getChartInsight()
-                : 'Chart data unavailable',
-            style: TextStyle(
-              color: const Color(0xFF1C1C1E),
-              fontSize: 13,
-              fontWeight: chartData.isNotEmpty
-                  ? FontWeight.w500
-                  : FontWeight.w400,
-              height: 1.4,
+
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AnalysisPage()),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F8E9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF2E7D32).withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isChartLoading
+                            ? 'Menganalisis data pasar...'
+                            : chartData.isNotEmpty
+                            ? _getChartInsight()
+                            : 'Data grafik tidak tersedia',
+                        style: const TextStyle(
+                          color: Color(0xFF1C1C1E),
+                          fontSize: 13,
+                          height: 1.5,
+                          fontFamily: 'SF Pro',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: Color(0xFF2E7D32),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -534,45 +501,65 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // BUILD CHART
+  // WIDGET: FL CHART BUILDER (Fixed Layout)
   // ============================================
   Widget _buildChart() {
-    final minY = chartData.map((e) => e.y).reduce((a, b) => a < b ? a : b);
-    final maxY = chartData.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+    // 1. Hitung Range Y (Min & Max)
+    final yValues = chartData.map((e) => e.y).toList();
+    final minY = yValues.reduce((a, b) => a < b ? a : b);
+    final maxY = yValues.reduce((a, b) => a > b ? a : b);
+
     final range = maxY - minY;
-    final padding = range * 0.12;
+    final buffer = (range == 0) ? minY * 0.05 : range * 0.2;
+
+    final finalMinY = minY - buffer;
+    final finalMaxY = maxY + buffer;
 
     return LineChart(
       LineChartData(
-        minY: minY - padding,
-        maxY: maxY + padding,
+        minY: finalMinY,
+        maxY: finalMaxY,
+
+        // Hapus padding chart default agar full width
+        minX: chartData.first.x,
+        maxX: chartData.last.x,
+
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: (range > 0) ? range / 4 : null,
+          horizontalInterval: (range > 0) ? range / 3 : 1,
           getDrawingHorizontalLine: (value) {
-            return FlLine(color: const Color(0xFFF2F2F7), strokeWidth: 1);
+            return FlLine(
+              color: Colors.grey.withOpacity(0.15),
+              strokeWidth: 1,
+              dashArray: [5, 5],
+            );
           },
         ),
+
         borderData: FlBorderData(show: false),
+
         titlesData: FlTitlesData(
           show: true,
+
+          // Sumbu Bawah (Tanggal)
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 32,
+              reservedSize: 30,
+              interval: 1,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
                 if (index >= 0 && index < chartDates.length) {
                   return Padding(
-                    padding: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       chartDates[index],
-                      style: const TextStyle(
-                        fontSize: 11,
+                      style: TextStyle(
+                        fontSize: 10,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
-                        letterSpacing: -0.2,
+                        color: Colors.grey[600],
+                        fontFamily: 'SF Pro',
                       ),
                     ),
                   );
@@ -581,28 +568,36 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
           ),
+
+          // Sumbu Kiri (Harga) - DIPERBAIKI: Jarak Kiri Dihapus
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 65,
-              interval: range / 4,
+              // Ubah dari 70 jadi 44 (pas untuk angka 5 digit "16,xxx")
+              reservedSize: 44,
+              interval: (range > 0) ? range / 3 : 100,
               getTitlesWidget: (value, meta) {
-                final formatted = NumberFormat('#,###').format(value.round());
+                if (value == finalMinY || value == finalMaxY) {
+                  return const SizedBox.shrink();
+                }
+
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  // Padding kanan dikurangi jadi 4 biar lebih rapat ke garis
+                  padding: const EdgeInsets.only(right: 4),
                   child: Text(
-                    formatted,
-                    style: const TextStyle(
+                    _formatNumber(value),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
                       fontSize: 10,
-                      color: Color(0xFF8E8E93),
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.2,
+                      color: Colors.grey[500],
+                      fontFamily: 'SF Pro',
                     ),
                   ),
                 );
               },
             ),
           ),
+
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
@@ -610,11 +605,13 @@ class _DashboardPageState extends State<DashboardPage> {
             sideTitles: SideTitles(showTitles: false),
           ),
         ),
+
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (touchedSpot) => const Color(0xFF1C1C1E),
-            tooltipRoundedRadius: 12,
+            // Perbaikan warna tooltip (pakai warna container gelap)
+            getTooltipColor: (spot) => const Color(0xFF1C1C1E),
+            tooltipRoundedRadius: 8,
             tooltipPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 8,
@@ -622,44 +619,29 @@ class _DashboardPageState extends State<DashboardPage> {
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((spot) {
                 final index = spot.x.toInt();
-                final date = index < chartDates.length ? chartDates[index] : '';
+                final date = (index < chartDates.length)
+                    ? chartDates[index]
+                    : '';
                 return LineTooltipItem(
                   '$date\nRp${_formatNumber(spot.y)}',
                   const TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontSize: 12,
-                    height: 1.4,
+                    fontFamily: 'SF Pro',
                   ),
                 );
               }).toList();
             },
           ),
           handleBuiltInTouches: true,
-          getTouchedSpotIndicator: (barData, spotIndexes) {
-            return spotIndexes.map((index) {
-              return TouchedSpotIndicatorData(
-                FlLine(color: const Color(0xFF2E7D32), strokeWidth: 2),
-                FlDotData(
-                  show: true,
-                  getDotPainter: (spot, percent, barData, index) {
-                    return FlDotCirclePainter(
-                      radius: 5,
-                      color: Colors.white,
-                      strokeWidth: 2.5,
-                      strokeColor: const Color(0xFF2E7D32),
-                    );
-                  },
-                ),
-              );
-            }).toList();
-          },
         ),
+
         lineBarsData: [
           LineChartBarData(
             spots: chartData,
             isCurved: true,
-            curveSmoothness: 0.4,
+            curveSmoothness: 0.35,
             color: const Color(0xFF2E7D32),
             barWidth: 3,
             isStrokeCapRound: true,
@@ -668,8 +650,9 @@ class _DashboardPageState extends State<DashboardPage> {
               getDotPainter: (spot, percent, barData, index) {
                 return FlDotCirclePainter(
                   radius: 4,
-                  color: const Color(0xFF2E7D32),
-                  strokeWidth: 0,
+                  color: Colors.white,
+                  strokeWidth: 2,
+                  strokeColor: const Color(0xFF2E7D32),
                 );
               },
             ),
@@ -677,9 +660,8 @@ class _DashboardPageState extends State<DashboardPage> {
               show: true,
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF2E7D32).withOpacity(0.2),
-                  const Color(0xFF2E7D32).withOpacity(0.05),
-                  Colors.transparent,
+                  const Color(0xFF2E7D32).withOpacity(0.25),
+                  const Color(0xFF2E7D32).withOpacity(0.0),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -692,26 +674,15 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // QUICK ACCESS CARD - iPhone Style
+  // WIDGET: QUICK ACCESS
   // ============================================
   Widget _quickAccessCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2E7D32).withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
             'Quick Access',
             style: TextStyle(
               fontWeight: FontWeight.w600,
@@ -720,73 +691,125 @@ class _DashboardPageState extends State<DashboardPage> {
               letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+        ),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
             children: [
-              _quickButton(Icons.currency_exchange_rounded, 'All Rates', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AllRatesWidget(),
-                  ),
-                );
-              }),
-              _quickButton(Icons.analytics_outlined, 'Analysis', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AnalysisPage()),
-                );
-              }),
-              _quickButton(Icons.swap_horiz_rounded, 'Convert', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ConvertPage()),
-                );
-              }),
+              Expanded(
+                child: _quickButtonGlass(
+                  Icons.currency_exchange_rounded,
+                  'All Rates',
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AllRatesWidget(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _quickButtonGlass(
+                  Icons.analytics_outlined,
+                  'Analysis',
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnalysisPage(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _quickButtonGlass(
+                  Icons.swap_horiz_rounded,
+                  'Convert',
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ConvertPage(),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _quickButton(IconData icon, String title, VoidCallback onTap) {
+  Widget _quickButtonGlass(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              color: const Color(0xFF2E7D32).withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: const Color(0xFF2E7D32), size: 30),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.center,
+            radius: 1.5,
+            colors: [
+              const Color(
+                0xFFD3ECCD,
+              ).withOpacity(0.15), // Center - lebih transparan
+              const Color(0xFFD3ECCD).withOpacity(0.35), // Edge - lebih solid
+            ],
+            stops: const [0.3, 1.0],
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: 68,
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF2E7D32).withOpacity(0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2E7D32).withOpacity(0.1),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+            // Inner glow untuk efek glass
+            BoxShadow(
+              color: const Color(0xFFD3ECCD).withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+              spreadRadius: -2,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon
+            Icon(icon, color: const Color(0xFF2E7D32), size: 32),
+            const SizedBox(height: 12),
+            // Label
+            Text(
+              label,
               style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
                 color: Color(0xFF1C1C1E),
-                height: 1.2,
-                letterSpacing: -0.2,
+                letterSpacing: -0.1,
               ),
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // ============================================
-  // POPULAR RATES CARD - iPhone Style
+  // WIDGET: POPULAR RATES
   // ============================================
   Widget _popularRatesCard() {
     return Container(
@@ -827,75 +850,58 @@ class _DashboardPageState extends State<DashboardPage> {
                 )
               : errorMessage.isNotEmpty
               ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.error_outline_rounded,
-                          color: Colors.grey[400],
-                          size: 48,
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.grey[400],
+                        size: 48,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        errorMessage,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _fetchPopularRates,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E7D32),
+                          foregroundColor: Colors.white,
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          errorMessage,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _fetchPopularRates,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E7D32),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Retry',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                        child: const Text('Retry'),
+                      ),
+                    ],
                   ),
                 )
               : ListView.separated(
+                  padding: EdgeInsets.zero,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: popularRates.length,
                   separatorBuilder: (context, _) => const Divider(
                     thickness: 0.5,
                     color: Color(0xFFF2F2F7),
-                    height: 1,
+                    height: 0,
                   ),
-                  // Di dalam ListView.separated dashboard_page.dart
                   itemBuilder: (context, i) {
                     final data = popularRates[i];
-
-                    // Ambil data yang sudah matang dari Map
-                    final String change = data['change']; // Ini sudah "+0.50%"
-                    final bool isUp = data['isUpValue'];
-
                     return _currencyListTile(
                       data['pair'],
                       'Rp${_formatNumber(data['value'])}',
-                      change, // Kirim string langsung
-                      isUp,
+                      data['change'],
+                      data['isUpValue'],
                       data['flag'],
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                DetailRatePage(rateData: data),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -910,83 +916,88 @@ class _DashboardPageState extends State<DashboardPage> {
     String change,
     bool isUp,
     String flag,
+    VoidCallback onTap,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F2F7),
-              borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F2F7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Text(flag, style: const TextStyle(fontSize: 24)),
             ),
-            alignment: Alignment.center,
-            child: Text(flag, style: const TextStyle(fontSize: 24)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  pair,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                    color: Color(0xFF1C1C1E),
-                    letterSpacing: -0.2,
+
+            const SizedBox(width: 16),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pair,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Color(0xFF1C1C1E),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8E8E93),
-                    fontWeight: FontWeight.w400,
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8E8E93),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: isUp
-                  ? const Color(0xFF34C759).withOpacity(0.1)
-                  : const Color(0xFFFF3B30).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isUp
-                      ? Icons.arrow_upward_rounded
-                      : Icons.arrow_downward_rounded,
-                  color: isUp
-                      ? const Color(0xFF34C759)
-                      : const Color(0xFFFF3B30),
-                  size: 14,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  change,
-                  style: TextStyle(
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isUp
+                    ? const Color(0xFF34C759).withOpacity(0.1)
+                    : const Color(0xFFFF3B30).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isUp
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
                     color: isUp
                         ? const Color(0xFF34C759)
                         : const Color(0xFFFF3B30),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    letterSpacing: -0.2,
+                    size: 14,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Text(
+                    change,
+                    style: TextStyle(
+                      color: isUp
+                          ? const Color(0xFF34C759)
+                          : const Color(0xFFFF3B30),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

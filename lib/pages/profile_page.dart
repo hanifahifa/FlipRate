@@ -15,7 +15,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   // UI Colors
-  static const Color primaryGreen = Color(0xFF2E7D32);
+  static const Color primaryGreen = Color(0xFF043915);
   static const Color lightGreen = Color(0xFFF1F8E9);
 
   // State Data User
@@ -34,7 +34,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _loadUserData() async {
     // Ambil username dari AuthRepository
     final user = await AuthRepository.getCurrentUser();
-    
+
     if (mounted) {
       setState(() {
         username = user ?? 'Guest';
@@ -178,7 +178,11 @@ class _ProfilePageState extends State<ProfilePage> {
             SizedBox(height: 12),
             Text(
               'Versi Aplikasi: 1.0.0 (Beta)',
-              style: TextStyle(fontFamily: 'SF Pro', fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontFamily: 'SF Pro',
+                fontSize: 12,
+                color: Colors.grey,
+              ),
             ),
           ],
         ),
@@ -194,11 +198,16 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           ListTile(
             leading: const Icon(Icons.feedback_outlined, color: primaryGreen),
-            title: const Text('Kirim Masukan', style: TextStyle(fontFamily: 'SF Pro')),
+            title: const Text(
+              'Kirim Masukan',
+              style: TextStyle(fontFamily: 'SF Pro'),
+            ),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur feedback akan segera hadir!')),
+                const SnackBar(
+                  content: Text('Fitur feedback akan segera hadir!'),
+                ),
               );
             },
           ),

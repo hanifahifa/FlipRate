@@ -6,7 +6,7 @@ class OpeningPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2E7D32),
+      backgroundColor: const Color(0xFF043915),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(30.0),
@@ -14,7 +14,11 @@ class OpeningPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.currency_exchange, size: 100, color: Colors.white),
+              const Icon(
+                Icons.currency_exchange,
+                size: 100,
+                color: Colors.white,
+              ),
               const SizedBox(height: 20),
               const Text(
                 'FlipRate',
@@ -37,11 +41,16 @@ class OpeningPage extends StatelessWidget {
                 onPressed: () => Navigator.pushNamed(context, '/login'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: const Color(0xFF043915),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(height: 16),
               OutlinedButton(
@@ -50,9 +59,14 @@ class OpeningPage extends StatelessWidget {
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Register', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Register',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(height: 40),
             ],
