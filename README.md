@@ -48,10 +48,10 @@ FlipRate dibangun menggunakan arsitektur **modular Flutter** dengan pendekatan p
 1. Pastikan **Flutter SDK** sudah terpasang.
 2. Clone repositori:
    ```bash
-   git clone https://github.com/NAMA_ANDA/fliprate.git
+   git clone https://github.com/hanifahifa/FlipRate
 3. Masuk ke direktori proyek:
    ```bash
-   cd fliprate
+   cd FlipRate
 4. Ambil semua dependencies:
    ```bash
    flutter pub get
