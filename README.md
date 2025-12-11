@@ -48,7 +48,7 @@ lib/
 ├── services/               # Raw API Call Logic (HTTP Request)
 ├── utils/                  # Helper (FavoriteManager, HistoryManager)
 └── widget/                 # Reusable Components (Navbar, ChartCard, etc)
-
+```
 **Teknologi dan Package yang Digunakan:**
 - **Flutter SDK (stable)**
 - **intl** → Format tanggal dan angka
@@ -68,18 +68,19 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di mesin lokal Anda (
 3. Masuk ke direktori proyek:
    ```Bash
    cd FlipRate
-
+   
 4. Pindah ke branch UAS (Penting):
    ```Bash
    git checkout uas
-
+   
 5. Ambil semua dependencies:
    ```Bash
    flutter pub get
 
-6.Jalankan aplikasi di emulator atau perangkat nyata:
+6. Jalankan aplikasi di emulator atau perangkat nyata:
    ```Bash
    flutter run
+   ```
 
 
 ## 🚀 Status Fitur & Roadmap
@@ -113,12 +114,19 @@ Fitur-fitur berikut direncanakan untuk pengembangan di masa depan (Versi 2.0):
 - [ ] **Feedback System:** Formulir pengiriman masukan pengguna ke server backend.
 
   ---
+## 📱 Tampilan Aplikasi
+![Screenshot_2025-12-11-15-59-40-19_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/6e7d1eb8-5d01-492a-a217-c78977d72783)
+![Screenshot_2025-12-11-15-59-46-20_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/3a76d05e-a040-4f4e-bdbe-bb25dda917d5)
+![Screenshot_2025-12-11-15-59-43-02_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/395fb393-f126-41da-bf37-1a75af803e72)
+![Screenshot_2025-12-11-15-58-44-43_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/422f4d1f-b43c-41bb-8c65-98c31c911fbe)
+![Screenshot_2025-12-11-15-58-52-99_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/280f148e-a6cc-425f-9449-fc2de730a65a)
+![Screenshot_2025-12-11-15-58-56-72_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/da0d5fe1-dae4-46a8-8cc3-d4b995aaccb3)
+![Screenshot_2025-12-11-15-59-28-90_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/ffa9cd51-ad3a-4296-8aa8-bf1443ec41f6)
+![Screenshot_2025-12-11-15-59-18-42_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/04fc019b-7170-4fe3-bfc3-c076214d75e1)
+![Screenshot_2025-12-11-15-59-10-00_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/89d4a405-da07-468e-95c4-1cd2b9f7ad79)
+![Screenshot_2025-12-11-15-59-05-63_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/beb21d07-d23b-404a-90d7-d96807c557a0)
+![Screenshot_2025-12-11-15-58-59-64_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/2efd05d5-cb66-45f9-8406-9af2bad05b1f)
 
-  ## 📱 Tampilan Aplikasi
-<img width="399" height="845" alt="Screenshot 2025-10-28 222900" src="https://github.com/user-attachments/assets/aeef841b-bff4-4591-8653-9cb1ec61ce19" />
-<img width="399" height="845" alt="Screenshot 2025-10-28 194034" src="https://github.com/user-attachments/assets/aaeaec6c-2e86-44da-a913-e4a0ce41484f" />
-<img width="399" height="845" alt="Screenshot 2025-10-28 194312" src="https://github.com/user-attachments/assets/e8a97335-a4b9-4d73-a523-1a618d559d9c" />
-<img width="399" height="845" alt="Screenshot 2025-10-28 194325" src="https://github.com/user-attachments/assets/3987c696-09ca-4d3f-b3db-548db4fd808e" />
 
 
 
