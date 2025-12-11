@@ -1,17 +1,20 @@
 // ------------------------------------------------------
-// DASHBOARD PAGE - FlipRate (Fixed: Detailed Chart Labels)
+// DASHBOARD PAGE - FINAL FIX
+// Features: Crash Handling, Smart Refresh, & Real Chart Logic
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:ui'; // Untuk BackdropFilter
+
+// Import file-file projectmu
 import '../repositories/currency_repository.dart';
 import '../services/exchange_rate_service.dart';
 import '../widget/all_rates.dart';
 import '../widget/convert.dart';
 import '../widget/analysis.dart';
 import '../widget/notification.dart';
-import 'dart:ui'; // Untuk BackdropFilter
 import 'addPages/detail_rate_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -77,6 +80,8 @@ class _DashboardPageState extends State<DashboardPage> {
       final rates = await CurrencyRepository.getPopularRates(
         currencies: popularCurrencies,
       );
+
+      // --- CRASH HANDLING ---
       if (!mounted) return;
 
       setState(() {
@@ -94,7 +99,10 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     } catch (e) {
       print('❌ Dashboard Error: $e');
+
+      // --- CRASH HANDLING ---
       if (!mounted) return;
+
       setState(() {
         isLoading = false;
         errorMessage = 'Unable to fetch rates.';
@@ -103,7 +111,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // FETCH HISTORICAL DATA (3 Days)
+  // FETCH HISTORICAL DATA (FIXED: NO DUMMY DATA)
   // ============================================
   Future<void> _fetchHistoricalData() async {
     setState(() {
@@ -116,27 +124,29 @@ class _DashboardPageState extends State<DashboardPage> {
       List<FlSpot> spots = [];
       List<String> dates = [];
 
+      // Loop 4 hari terakhir (H-3 sampai Hari H)
       for (int i = 3; i >= 0; i--) {
         final targetDate = now.subtract(Duration(days: i));
 
-        try {
-          final historicalRates =
-              await ExchangeRateService.fetchHistoricalRates(
-                baseCurrency: 'USD',
-                daysAgo: i,
-              );
+        // Panggil Service
+        final historicalRates = await ExchangeRateService.fetchHistoricalRates(
+          baseCurrency: 'USD',
+          daysAgo: i,
+        );
 
-          final idrRate =
-              historicalRates['IDR'] ?? 15700.0; // Fallback jika null
-
-          spots.add(FlSpot((3 - i).toDouble(), idrRate));
-          dates.add(DateFormat('d MMM').format(targetDate));
-        } catch (e) {
-          // Fallback data dummy jika fetch gagal per hari
-          spots.add(FlSpot((3 - i).toDouble(), 15700.0));
-          dates.add(DateFormat('d MMM').format(targetDate));
+        // Validasi: Jika data kosong / IDR tidak ada, lempar error
+        // agar masuk ke catch dan menampilkan pesan error (bukan data palsu)
+        if (historicalRates.isEmpty || !historicalRates.containsKey('IDR')) {
+          throw Exception('Data historis tidak tersedia');
         }
+
+        final idrRate = historicalRates['IDR']!;
+
+        spots.add(FlSpot((3 - i).toDouble(), idrRate));
+        dates.add(DateFormat('d MMM').format(targetDate));
       }
+
+      // --- CRASH HANDLING ---
       if (!mounted) return;
 
       setState(() {
@@ -146,10 +156,15 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     } catch (e) {
       print('❌ Dashboard Chart Error: $e');
+
+      // --- CRASH HANDLING ---
       if (!mounted) return;
+
       setState(() {
         isChartLoading = false;
-        chartErrorMessage = 'Chart data unavailable';
+        // Tampilkan pesan error jujur
+        chartErrorMessage = 'Data grafik tidak tersedia saat ini.';
+        chartData = []; // Kosongkan data agar UI menampilkan pesan error
       });
     }
   }
@@ -173,7 +188,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // HELPER: GET CHART INSIGHT (FIXED LOGIC)
+  // HELPER: GET CHART INSIGHT
   // ============================================
   String _getChartInsight() {
     if (chartData.length < 2) return 'Insufficient data for trend analysis';
@@ -189,16 +204,16 @@ class _DashboardPageState extends State<DashboardPage> {
     if (difference > 0) {
       // Harga NAIK (15k -> 16k) = Rupiah MELEMAH
       direction = 'weakened';
-      emoji = '📉'; // Panah turun (Nilai Rupiah turun)
+      emoji = '📉';
     } else if (difference < 0) {
       // Harga TURUN (16k -> 15k) = Rupiah MENGUAT
       direction = 'strengthened';
-      emoji = '📈'; // Panah naik (Nilai Rupiah naik)
+      emoji = '📈';
     } else {
       return '➡️ IDR remains stable over the past 3 days';
     }
 
-    return '$emoji IDR has $direction by ${percentageChange.abs().toStringAsFixed(2)}% (Rp${difference.abs().toStringAsFixed(0)}) in last few days';
+    return '$emoji IDR has $direction by ${percentageChange.abs().toStringAsFixed(2)}% (Rp${difference.abs().toStringAsFixed(0)}) in 3 days';
   }
 
   // ============================================
@@ -214,18 +229,17 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F8E9),
-      // 1. RefreshIndicator dipindah ke sini (Membungkus CustomScrollView)
+      // 1. REFRESH INDICATOR MEMBUNGKUS BODY UTAMA
       body: RefreshIndicator(
         onRefresh: _refreshAll,
         color: const Color(0xFF2E7D32),
         backgroundColor: Colors.white,
-        displacement:
-            60, // Jarak indikator dari atas agar tidak tertutup AppBar
-        edgeOffset: 120, // Sesuaikan dengan tinggi Expanded AppBar
+        displacement: 60,
+        edgeOffset: 120, // Agar muncul di bawah AppBar yang expanded
 
         child: CustomScrollView(
           controller: _scrollController,
-          // 2. Tambahkan physics ini agar bisa ditarik walau konten sedikit
+          // 2. PHYSICS AGAR BISA DITARIK MESKI KONTEN SEDIKIT
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
@@ -332,7 +346,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
             // Content Body
             SliverToBoxAdapter(
-              // 3. RefreshIndicator di sini DIHAPUS, langsung ke Padding/Column
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -402,7 +415,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Last Few Days Trend',
+                    'Lats 3 Days Trend',
                     style: TextStyle(
                       fontSize: 13,
                       color: Color(0xFF8E8E93),
@@ -436,6 +449,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           const SizedBox(height: 24),
 
+          // --- LOGIKA TAMPILAN GRAFIK ---
           SizedBox(
             height: 200,
             child: isChartLoading
@@ -445,13 +459,42 @@ class _DashboardPageState extends State<DashboardPage> {
                       strokeWidth: 2.5,
                     ),
                   )
-                : chartData.isEmpty
-                ? const Center(child: Text('No data'))
+                : (chartErrorMessage.isNotEmpty || chartData.isEmpty)
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.show_chart,
+                          color: Colors.grey,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          chartErrorMessage.isNotEmpty
+                              ? chartErrorMessage
+                              : 'Data tidak tersedia',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _fetchHistoricalData,
+                          child: const Text(
+                            'Coba Lagi',
+                            style: TextStyle(color: Color(0xFF2E7D32)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 : _buildChart(),
           ),
 
           const SizedBox(height: 16),
 
+          // --- TOMBOL MENUJU ANALYSIS PAGE ---
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -479,7 +522,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             ? 'Menganalisis data pasar...'
                             : chartData.isNotEmpty
                             ? _getChartInsight()
-                            : 'Data grafik tidak tersedia',
+                            : 'Analisis pasar belum tersedia',
                         style: const TextStyle(
                           color: Color(0xFF1C1C1E),
                           fontSize: 13,
@@ -505,10 +548,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ============================================
-  // WIDGET: FL CHART BUILDER (Fixed Layout)
+  // WIDGET: FL CHART BUILDER
   // ============================================
   Widget _buildChart() {
-    // 1. Hitung Range Y (Min & Max)
     final yValues = chartData.map((e) => e.y).toList();
     final minY = yValues.reduce((a, b) => a < b ? a : b);
     final maxY = yValues.reduce((a, b) => a > b ? a : b);
@@ -523,11 +565,8 @@ class _DashboardPageState extends State<DashboardPage> {
       LineChartData(
         minY: finalMinY,
         maxY: finalMaxY,
-
-        // Hapus padding chart default agar full width
         minX: chartData.first.x,
         maxX: chartData.last.x,
-
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -540,13 +579,9 @@ class _DashboardPageState extends State<DashboardPage> {
             );
           },
         ),
-
         borderData: FlBorderData(show: false),
-
         titlesData: FlTitlesData(
           show: true,
-
-          // Sumbu Bawah (Tanggal)
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -572,21 +607,16 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
           ),
-
-          // Sumbu Kiri (Harga) - DIPERBAIKI: Jarak Kiri Dihapus
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              // Ubah dari 70 jadi 44 (pas untuk angka 5 digit "16,xxx")
               reservedSize: 44,
               interval: (range > 0) ? range / 3 : 100,
               getTitlesWidget: (value, meta) {
                 if (value == finalMinY || value == finalMaxY) {
                   return const SizedBox.shrink();
                 }
-
                 return Padding(
-                  // Padding kanan dikurangi jadi 4 biar lebih rapat ke garis
                   padding: const EdgeInsets.only(right: 4),
                   child: Text(
                     _formatNumber(value),
@@ -601,7 +631,6 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
           ),
-
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
@@ -609,11 +638,9 @@ class _DashboardPageState extends State<DashboardPage> {
             sideTitles: SideTitles(showTitles: false),
           ),
         ),
-
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
-            // Perbaikan warna tooltip (pakai warna container gelap)
             getTooltipColor: (spot) => const Color(0xFF1C1C1E),
             tooltipRoundedRadius: 8,
             tooltipPadding: const EdgeInsets.symmetric(
@@ -640,7 +667,6 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           handleBuiltInTouches: true,
         ),
-
         lineBarsData: [
           LineChartBarData(
             spots: chartData,
@@ -762,10 +788,8 @@ class _DashboardPageState extends State<DashboardPage> {
             center: Alignment.center,
             radius: 1.5,
             colors: [
-              const Color(
-                0xFFD3ECCD,
-              ).withOpacity(0.15), // Center - lebih transparan
-              const Color(0xFFD3ECCD).withOpacity(0.35), // Edge - lebih solid
+              const Color(0xFFD3ECCD).withOpacity(0.15),
+              const Color(0xFFD3ECCD).withOpacity(0.35),
             ],
             stops: const [0.3, 1.0],
           ),
@@ -780,7 +804,6 @@ class _DashboardPageState extends State<DashboardPage> {
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
-            // Inner glow untuk efek glass
             BoxShadow(
               color: const Color(0xFFD3ECCD).withOpacity(0.3),
               blurRadius: 8,
@@ -792,10 +815,8 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icon
             Icon(icon, color: const Color(0xFF2E7D32), size: 32),
             const SizedBox(height: 12),
-            // Label
             Text(
               label,
               style: const TextStyle(
@@ -939,9 +960,7 @@ class _DashboardPageState extends State<DashboardPage> {
               alignment: Alignment.center,
               child: Text(flag, style: const TextStyle(fontSize: 24)),
             ),
-
             const SizedBox(width: 16),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,7 +984,6 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(

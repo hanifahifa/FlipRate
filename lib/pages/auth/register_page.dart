@@ -73,15 +73,16 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
             Text('Reset Password', style: TextStyle(fontSize: 18)),
           ],
         ),
+        // Translated to English
         content: const Text(
-          'Untuk mereset password, silakan registrasi ulang dengan username yang sama dan password baru.',
+          'To reset your password, please register again using the same username and a new password.',
           style: TextStyle(fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
-              'Mengerti',
+              'Understood', // Translated
               style: TextStyle(
                 color: Color(0xFF043915),
                 fontWeight: FontWeight.bold,
@@ -94,6 +95,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
   }
 
   void _handleRegister() async {
+    // Validation: Empty Fields
     if (_usernameCtrl.text.isEmpty || _passwordCtrl.text.isEmpty || _confirmPasswordCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -101,7 +103,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.white),
               SizedBox(width: 12),
-              Expanded(child: Text('Semua field harus diisi!')),
+              Expanded(child: Text('All fields must be filled!')), // Translated
             ],
           ),
           backgroundColor: Colors.orange.shade700,
@@ -113,6 +115,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
       return;
     }
 
+    // Validation: Password Match
     if (_passwordCtrl.text != _confirmPasswordCtrl.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -120,7 +123,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
             children: [
               Icon(Icons.error_outline, color: Colors.white),
               SizedBox(width: 12),
-              Expanded(child: Text('Password tidak sama!')),
+              Expanded(child: Text('Passwords do not match!')), // Translated
             ],
           ),
           backgroundColor: Colors.red.shade600,
@@ -132,6 +135,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
       return;
     }
 
+    // Validation: Password Length
     if (_passwordCtrl.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -139,7 +143,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.white),
               SizedBox(width: 12),
-              Expanded(child: Text('Password minimal 6 karakter!')),
+              Expanded(child: Text('Password must be at least 6 characters!')), // Translated
             ],
           ),
           backgroundColor: Colors.orange.shade700,
@@ -165,7 +169,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
             children: [
               Icon(Icons.check_circle_outline, color: Colors.white),
               SizedBox(width: 12),
-              Expanded(child: Text('Registrasi Berhasil! Silakan Login.')),
+              Expanded(child: Text('Registration Successful! Please Login.')), // Translated
             ],
           ),
           backgroundColor: Colors.green.shade600,

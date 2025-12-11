@@ -1,7 +1,7 @@
 // ------------------------------------------------------
 // ACTIVITY PAGE - Refactored (Clean Architecture)
-// Menggunakan Repository untuk fetch rate terkini
-// Menggunakan HistoryManager untuk data lokal
+// Uses Repository to fetch latest rates
+// Uses HistoryManager for local data
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
@@ -25,7 +25,7 @@ class _ActivityPageState extends State<ActivityPage> {
   List<Map<String, dynamic>> recentlyViewed = [];
   bool isLoading = true;
 
-  // State untuk expand/collapse
+  // State for expand/collapse
   bool showAllHistory = false;
   bool showAllRecentlyViewed = false;
 
@@ -40,10 +40,10 @@ class _ActivityPageState extends State<ActivityPage> {
 
     setState(() => isLoading = true);
 
-    // 1. Load History (Lokal)
+    // 1. Load History (Local)
     await _loadConversionHistory();
 
-    // 2. Load Recently Viewed (Lokal + Fetch Rate Terbaru via Repo)
+    // 2. Load Recently Viewed (Local + Fetch Latest Rate via Repo)
     await _loadRecentlyViewed();
 
     if (mounted) {
@@ -51,7 +51,7 @@ class _ActivityPageState extends State<ActivityPage> {
     }
   }
 
-  /// Mengambil conversion history dari HistoryManager
+  /// Fetch conversion history from HistoryManager
   Future<void> _loadConversionHistory() async {
     try {
       final history = await HistoryManager.getConversionHistory();
@@ -65,7 +65,7 @@ class _ActivityPageState extends State<ActivityPage> {
     }
   }
 
-  /// Mengambil recently viewed dan update rate terkini via Repository
+  /// Fetch recently viewed and update latest rate via Repository
   Future<void> _loadRecentlyViewed() async {
     try {
       final viewed = await HistoryManager.getRecentlyViewed();
@@ -78,7 +78,7 @@ class _ActivityPageState extends State<ActivityPage> {
         final to = item['to'] as String;
         final dt = item['time'] as DateTime;
 
-        // PERUBAHAN UTAMA: Panggil Repository, bukan HTTP langsung
+        // MAIN CHANGE: Call Repository, not direct HTTP
         final rate = await CurrencyRepository.getExchangeRate(
           from: from,
           to: to,
@@ -103,7 +103,7 @@ class _ActivityPageState extends State<ActivityPage> {
     }
   }
 
-  // Logic Insight (Client Side Logic - Aman di UI)
+  // Logic Insight (Client Side Logic - UI Safe)
   String buildInsight() {
     if (conversionHistory.isEmpty) {
       return 'Start converting currencies to get personalized insights.';
@@ -127,16 +127,18 @@ class _ActivityPageState extends State<ActivityPage> {
     });
 
     if (mostUsedCurrency.isNotEmpty) {
-      //final conversionCount = conversionHistory.length;
-      return 'Anda sering menukar $mostUsedCurrency ($maxCount kali). Pantau terus pergerakan kurs ini!';
+      // Translated to English
+      return 'You frequently convert $mostUsedCurrency $maxCount times. Keep monitoring this rate!';
     }
 
     if (recentlyViewed.isNotEmpty) {
       final recentPair = recentlyViewed.first['pair'] as String;
-      return 'Anda baru saja melihat kurs $recentPair. Cek kembali untuk update terbaru.';
+      // Translated to English
+      return 'You recently viewed $recentPair. Check back for the latest updates.';
     }
 
-    return 'Pantau terus aktivitas tukar mata uang Anda di sini.';
+    // Translated to English
+    return 'Keep track of your currency exchange activities here.';
   }
 
   String relativeTime(DateTime dt) {
@@ -172,7 +174,7 @@ class _ActivityPageState extends State<ActivityPage> {
               fontSize: 20,
             ),
           ),
-          backgroundColor: Color(0xFF043915),
+          backgroundColor: const Color(0xFF043915),
           elevation: 0,
           centerTitle: false,
         ),
@@ -358,7 +360,7 @@ class _ActivityPageState extends State<ActivityPage> {
               }
 
               final r = displayedViewed[index];
-              // Mengambil flag dari Repo helper
+              // Fetch flag from Repo helper
               final flag = CurrencyRepository.getFlag(r['from']);
 
               return Padding(

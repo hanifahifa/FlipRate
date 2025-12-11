@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../repositories/auth_repository.dart';
-import 'register_page.dart'; // 👈 TAMBAHKAN INI!
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -69,7 +69,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               children: [
                 Icon(Icons.error_outline, color: Colors.white),
                 SizedBox(width: 12),
-                Expanded(child: Text('Username atau Password salah!')),
+                Expanded(child: Text('Invalid Username or Password!')), // Translated
               ],
             ),
             backgroundColor: Colors.red.shade600,
