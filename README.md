@@ -1,39 +1,53 @@
-# 💱 FlipRate – Aplikasi Pemantau & Konversi Kurs Dunia
+# 💱 FlipRate – Smart Currency Converter & Tracker
 
-FlipRate adalah aplikasi mobile berbasis Flutter yang berfungsi untuk **memantau nilai tukar mata uang**, **melihat riwayat aktivitas konversi**, serta **menyimpan mata uang favorit** agar pengguna dapat melakukan analisis dan perbandingan secara lebih cepat.  
-Aplikasi ini dirancang dengan tampilan **modern, minimalis, dan fokus pada kenyamanan pengguna**, sehingga cocok digunakan oleh siapa saja yang ingin memantau perubahan kurs secara real-time.
+**FlipRate** adalah aplikasi mobile berbasis Flutter yang dirancang untuk memantau nilai tukar mata uang secara *real-time*, menganalisis tren pasar melalui grafik interaktif, dan melakukan konversi mata uang dengan presisi.
+
+Aplikasi ini dibangun menggunakan prinsip **Clean Architecture** (memisahkan UI, Repository, dan Service) serta menerapkan mekanisme **API Fallback** untuk menjamin data selalu tersedia meskipun salah satu penyedia layanan sedang *down*.
 
 ---
 
-## 🧩 Fitur Utama
+## 🌟 Fitur Unggulan
 
-🔹 **Dashboard (Home Page)**  
-Menampilkan daftar kurs terkini antar berbagai mata uang dunia lengkap dengan simbol dan bendera negara.
+### 1. 🏠 Smart Dashboard
+* **Real-time Rates:** Menampilkan nilai tukar mata uang populer (USD, EUR, JPY, SGD) terhadap IDR.
+* **Trend Chart:** Grafik interaktif (menggunakan `fl_chart`) yang menampilkan pergerakan harga 3-4 hari terakhir untuk analisis tren.
+* **Smart Refresh:** Fitur *pull-to-refresh* yang memperbarui data pasar dan grafik sekaligus.
 
-🔹 **Activity Page**  
-Mencatat seluruh aktivitas konversi mata uang pengguna dalam tampilan list dinamis menggunakan `ListView.builder`.
+### 2. 🔁 Konversi & Riwayat (Activity)
+* **Instant Conversion:** Konversi mata uang dengan dukungan *Cross-Rate* (menghitung nilai tukar silang secara otomatis).
+* **Local History:** Riwayat konversi disimpan secara lokal menggunakan `shared_preferences`, sehingga pengguna bisa melihat aktivitas terakhir mereka.
+* **Smart Filter:** Cari mata uang dengan mudah berdasarkan kode atau nama negara.
 
-🔹 **Favorite Page**  
-Menampilkan mata uang yang telah ditandai sebagai favorit untuk akses cepat.
+### 3. ⭐ Favorite Watchlist
+* Menandai mata uang favorit untuk pemantauan cepat.
+* Indikator visual (Hijau 📈 / Merah 📉) untuk melihat kenaikan atau penurunan harga secara instan.
 
-🔹 **Profile Page**  
-Menampilkan informasi pengguna dengan tampilan bersih dan warna lembut.
+### 4. 📊 Market Analysis
+* **Top Gainers & Losers:** Menganalisis mata uang mana yang paling menguat dan melemah dalam 24 jam terakhir.
+* **Market Insight:** Memberikan sinyal "Bullish" atau "Bearish" berdasarkan data pergerakan harga.
 
-🔹 **Bottom Navigation Bar (Navbar)**  
-Navigasi utama aplikasi yang berisi empat menu utama (Dashboard, Activity, Favorite, Profile) dan tetap mengambang saat halaman digulir.
+### 5. 🔔 Notification System
+* Sistem simulasi notifikasi yang memberitahu pengguna jika terjadi perubahan harga signifikan pada mata uang favorit.
 
 ---
 
 ## 🏗️ Arsitektur & Teknologi
 
-FlipRate dibangun menggunakan arsitektur **modular Flutter** dengan pendekatan pemisahan komponen berdasarkan fungsi, agar mudah dikembangkan dan dikelola.
+FlipRate dibangun dengan struktur **Clean Architecture** untuk memastikan kode mudah dikelola (*maintainable*) dan skalabel.
 
-**Struktur Folder:**
-- `pages` : Halaman utama aplikasi (`DashboardPage`, `ActivityPage`, `FavoritePage`, `ProfilePage`).
-- `widgets` : Widget kustom yang dapat digunakan ulang (`Navbar`).
-- `models` : Model data (jika nanti ditambahkan API atau data lokal).
-- `services` : Tempat logika pengambilan data (akan digunakan setelah integrasi API).
-
+### Struktur Folder
+```text
+lib/
+├── main.dart               # Entry point & Routing Logic
+├── models/                 # Model Data (JSON Serialization)
+├── pages/                  # Halaman UI Utama
+│   ├── auth/               # Login & Register
+│   ├── addPages/           # Halaman Detail (DetailRatePage)
+│   └── ...                 # Dashboard, Activity, Favorite, Profile
+├── repositories/           # Business Logic & Data Processing (Otak Aplikasi)
+├── services/               # Raw API Call Logic (HTTP Request)
+├── utils/                  # Helper (FavoriteManager, HistoryManager)
+└── widget/                 # Reusable Components (Navbar, ChartCard, etc)
 
 **Teknologi dan Package yang Digunakan:**
 - **Flutter SDK (stable)**
@@ -42,36 +56,61 @@ FlipRate dibangun menggunakan arsitektur **modular Flutter** dengan pendekatan p
 - **Material Design 3** → Tampilan UI modern dan konsisten
 
 ---
+## ⚙️ Cara Menjalankan Aplikasi
 
-## ⚙️ Cara Menjalankan
+Ikuti langkah-langkah berikut untuk menjalankan proyek ini di mesin lokal Anda (pastikan berada di branch `uas`):
 
-1. Pastikan **Flutter SDK** sudah terpasang.
-2. Clone repositori:
+1. **Pastikan Flutter SDK sudah terpasang.**
+2. Clone repositori ini:
    ```bash
-   git clone https://github.com/hanifahifa/FlipRate
+   git clone [https://github.com/hanifahifa/FlipRate](https://github.com/hanifahifa/FlipRate)
+
 3. Masuk ke direktori proyek:
-   ```bash
+   ```Bash
    cd FlipRate
-4. Ambil semua dependencies:
-   ```bash
+
+4. Pindah ke branch UAS (Penting):
+   ```Bash
+   git checkout uas
+
+5. Ambil semua dependencies:
+   ```Bash
    flutter pub get
-5. Jalankan aplikasi di emulator atau perangkat nyata:
-      ```bash
+
+6.Jalankan aplikasi di emulator atau perangkat nyata:
+   ```Bash
    flutter run
 
 
-  ---
+## 🚀 Status Fitur & Roadmap
 
-## Roadmap & Pengembangan Selanjutnya
+Berdasarkan versi pengembangan terkini (Branch `uas`), berikut adalah status realisasi fitur dalam aplikasi FlipRate:
 
-Proyek FlipRate masih berada pada tahap pengembangan awal dan direncanakan akan terus dikembangkan dengan penambahan fitur serta peningkatan performa. Beberapa rencana pengembangan selanjutnya meliputi:
+### ✅ Fitur Terealisasi (Sudah Ada)
+- [x] **Sistem Autentikasi & Akun:**
+  - Login & Register dengan validasi input dan animasi transisi.
+  - **Reset Password** (Simulasi logika pemulihan akun).
+  - Mekanisme Logout & Session management.
+- [x] **Dashboard & Monitoring:**
+  - Integrasi API Real-time untuk kurs mata uang.
+  - **Grafik Interaktif (Chart)** untuk memantau tren nilai tukar (USD to IDR).
+  - **Fitur Notifikasi** untuk pembaruan aplikasi/kurs.
+- [x] **Manajemen Favorit:**
+  - Menambah dan menghapus mata uang ke daftar pantauan.
+  - Kalkulasi kenaikan/penurunan persentase kurs secara otomatis.
+- [x] **Aktivitas & Riwayat:**
+  - Mencatat riwayat konversi (*Conversion History*).
+  - Menyimpan daftar mata uang yang baru dilihat (*Recently Viewed*).
+  - *Smart Insight* memberikan wawasan berdasarkan data lokal.
+- [x] **Antarmuka Pengguna (UI/UX):**
+  - Desain modern dengan animasi *Fade & Slide*.
+  - *Crash Handling* (Penanganan error) saat pengambilan data gagal.
 
-- Integrasi API real-time untuk menampilkan data kurs mata uang secara langsung.  
-- Penambahan fitur grafik interaktif guna memantau tren nilai tukar.  
-- Implementasi sistem autentikasi pengguna.  
-- Optimalisasi tampilan antarmuka agar lebih responsif dan menarik.  
-- Penambahan fitur riwayat transaksi serta penyimpanan preferensi pengguna.  
-- Penerapan mode gelap (dark mode) dan personalisasi tema.
+### 🔜 Rencana Pengembangan Selanjutnya (Future Work)
+Fitur-fitur berikut direncanakan untuk pengembangan di masa depan (Versi 2.0):
+- [ ] **Mode Gelap (Dark Mode):** Dukungan tema gelap otomatis mengikuti sistem.
+- [ ] **Dukungan Multi-Bahasa:** Penambahan opsi Bahasa Inggris dan Indonesia secara penuh.
+- [ ] **Feedback System:** Formulir pengiriman masukan pengguna ke server backend.
 
   ---
 
