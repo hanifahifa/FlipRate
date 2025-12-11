@@ -1,6 +1,6 @@
 // ------------------------------------------------------
 // PROFILE PAGE - Refactored (Dynamic User Data)
-// Menampilkan info user yang sedang login via AuthRepo
+// Displays currently logged-in user info via AuthRepo
 // ------------------------------------------------------
 
 import 'package:flutter/material.dart';
@@ -18,7 +18,7 @@ class _ProfilePageState extends State<ProfilePage> {
   static const Color primaryGreen = Color(0xFF043915);
   static const Color lightGreen = Color(0xFFF1F8E9);
 
-  // State Data User
+  // User State Data
   String username = 'Guest';
   bool isLoading = true;
 
@@ -32,7 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
   // LOAD USER DATA VIA REPOSITORY
   // ==========================================
   Future<void> _loadUserData() async {
-    // Ambil username dari AuthRepository
+    // Get username from AuthRepository
     final user = await AuthRepository.getCurrentUser();
 
     if (mounted) {
@@ -47,33 +47,33 @@ class _ProfilePageState extends State<ProfilePage> {
   // LOGOUT LOGIC
   // ==========================================
   Future<void> _handleLogout() async {
-    // 1. Tampilkan dialog konfirmasi
+    // 1. Show confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
+        content: const Text('Are you sure you want to logout?'), // Translated
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: const Text('Cancel'), // Translated
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Keluar'),
+            child: const Text('Logout'), // Translated
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      // 2. Panggil Repository untuk hapus session
+      // 2. Call Repository to clear session
       await AuthRepository.logout();
 
       if (mounted) {
-        // 3. Arahkan kembali ke halaman Login/Opening & Hapus semua route history
+        // 3. Navigate back to Login/Opening & Clear route history
         Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
       }
     }
@@ -104,7 +104,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   const SizedBox(height: 20),
 
-                  // ---------- FOTO & DATA USER (DINAMIS) ----------
+                  // ---------- USER PHOTO & DATA (DYNAMIC) ----------
                   CircleAvatar(
                     radius: 45,
                     backgroundColor: const Color(0xFFA5D6A7),
@@ -119,7 +119,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    username, // Tampilkan Username Dinamis
+                    username, // Display Dynamic Username
                     style: const TextStyle(
                       fontFamily: 'SF Pro',
                       fontSize: 22,
@@ -129,7 +129,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'User Account', // Label statis karena auth simple
+                    'User Account',
                     style: TextStyle(
                       fontFamily: 'SF Pro',
                       color: Colors.black54,
@@ -139,12 +139,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 30),
 
-                  // ---------- INFO APLIKASI ----------
+                  // ---------- APP INFO ----------
                   _buildInfoCard(),
 
                   const SizedBox(height: 20),
 
-                  // ---------- TOMBOL AKSI (LOGOUT) ----------
+                  // ---------- ACTION BUTTONS (LOGOUT) ----------
                   _buildActionCard(),
                 ],
               ),
@@ -162,7 +162,7 @@ class _ProfilePageState extends State<ProfilePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
             Text(
-              'Tentang Aplikasi',
+              'About App', // Translated
               style: TextStyle(
                 fontFamily: 'SF Pro',
                 fontWeight: FontWeight.bold,
@@ -172,12 +172,12 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             SizedBox(height: 8),
             Text(
-              'FlipRate membantu Anda memantau kurs mata uang secara real-time, melihat grafik tren, dan melakukan konversi dengan mudah.',
+              'FlipRate helps you monitor exchange rates in real-time, view trend charts, and perform conversions easily.', // Translated
               style: TextStyle(fontFamily: 'SF Pro', fontSize: 14, height: 1.4),
             ),
             SizedBox(height: 12),
             Text(
-              'Versi Aplikasi: 1.0.0 (Beta)',
+              'App Version: 1.0.0 (Beta)', // Translated
               style: TextStyle(
                 fontFamily: 'SF Pro',
                 fontSize: 12,
@@ -199,14 +199,14 @@ class _ProfilePageState extends State<ProfilePage> {
           ListTile(
             leading: const Icon(Icons.feedback_outlined, color: primaryGreen),
             title: const Text(
-              'Kirim Masukan',
+              'Send Feedback', // Translated
               style: TextStyle(fontFamily: 'SF Pro'),
             ),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Fitur feedback akan segera hadir!'),
+                  content: Text('Feedback feature coming soon!'), // Translated
                 ),
               );
             },
@@ -215,10 +215,10 @@ class _ProfilePageState extends State<ProfilePage> {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.redAccent),
             title: const Text(
-              'Keluar Akun',
+              'Logout', // Translated
               style: TextStyle(fontFamily: 'SF Pro', color: Colors.redAccent),
             ),
-            onTap: _handleLogout, // Panggil fungsi logout
+            onTap: _handleLogout, // Call logout function
           ),
         ],
       ),

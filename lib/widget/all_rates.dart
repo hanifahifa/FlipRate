@@ -9,10 +9,10 @@ import '../pages/addPages/detail_rate_page.dart';
 import '../utils/history_manager.dart';
 
 // =====================================================
-// APP COLORS - Ubah warna primary di sini untuk ganti semua tema!
+// APP COLORS - Change primary color here to update theme!
 // =====================================================
 class AppColors {
-  static const Color primary = Color(0xFF043915); // 👈 UBAH DI SINI!
+  static const Color primary = Color(0xFF043915); // 👈 CHANGE HERE!
   static const Color primaryLight = Color(0xFF2E7D32);
   static const Color background = Color(0xFFF1F8E9);
   static const Color backgroundWhite = Colors.white;
@@ -71,9 +71,10 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
 
       setState(() {
         isLoading = false;
-        errorMessage = 'Gagal memuat data. Periksa koneksi internet Anda.';
+        errorMessage =
+            'Failed to load data. Please check your internet connection.'; // Translated
       });
-      print("Error di AllRates: $e");
+      print("Error in AllRates: $e");
     }
   }
 
@@ -114,7 +115,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.search, color: AppColors.primary),
-                  hintText: 'Cari mata uang (USD, Euro...)',
+                  hintText: 'Search currency (USD, Euro...)', // Translated
                   filled: true,
                   fillColor: AppColors.backgroundWhite,
                   border: OutlineInputBorder(
@@ -162,7 +163,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                               backgroundColor: AppColors.primary,
                               foregroundColor: AppColors.textWhite,
                             ),
-                            child: const Text("Coba Lagi"),
+                            child: const Text("Try Again"), // Translated
                           ),
                         ],
                       ),
@@ -170,7 +171,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
                   : filteredRates.isEmpty
                   ? Center(
                       child: Text(
-                        'Data tidak ditemukan',
+                        'Data not found', // Translated
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                     )

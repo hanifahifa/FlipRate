@@ -11,19 +11,19 @@ class AnalysisPage extends StatefulWidget {
   const AnalysisPage({super.key});
 
   // ------------------------------------------------------
-  // 🎨 THEME COLORS - Ditempatkan di bagian atas
+  // 🎨 THEME COLORS
   // ------------------------------------------------------
   static const Color primary = Color(
     0xFF043915,
-  ); // 👈 UBAH DI SINI! (Sebelumnya primaryGreen)
+  ); // 👈 CHANGE HERE! (Was primaryGreen)
 
   static const Color darkPrimary = Color(
     0xFF021C08,
-  ); // Diambil dari warna yang lebih gelap dari primary
+  ); // Darker shade of primary
 
   static const Color lightBg = Color(0xFFF1F8E9); // Background
 
-  // Warna yang lain
+  // Accent Colors
   static const Color greenAccent = Color(0xFF4CAF50);
   static const Color redAccent = Color(0xFFF44336);
 
@@ -32,7 +32,7 @@ class AnalysisPage extends StatefulWidget {
 }
 
 class _AnalysisPageState extends State<AnalysisPage> {
-  // Akses warna statis dari StatefulWidget
+  // Access static colors from StatefulWidget
   final Color primaryColor = AnalysisPage.primary;
   final Color darkPrimaryColor = AnalysisPage.darkPrimary;
   final Color lightBgColor = AnalysisPage.lightBg;
@@ -51,18 +51,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
     {
       'icon': Icons.trending_up,
       'color': AnalysisPage.greenAccent,
-      'title': 'USD Menguat Tajam',
+      'title': 'USD Surges Sharply', // Translated
       'subtitle':
-          'The Fed mempertahankan suku bunga, mendorong kepercayaan investor.',
-      'time': '2 jam lalu',
+          'The Fed maintains interest rates, boosting investor confidence.', // Translated
+      'time': '2 hours ago', // Translated
     },
     {
       'icon': Icons.info_outline,
       'color': Colors.blue,
-      'title': 'Update Pasar Asia',
+      'title': 'Asia Market Update', // Translated
       'subtitle':
-          'SGD dan JPY menunjukkan volatilitas moderat di tengah isu dagang.',
-      'time': '5 jam lalu',
+          'SGD and JPY show moderate volatility amidst trade issues.', // Translated
+      'time': '5 hours ago', // Translated
     },
   ];
 
@@ -116,7 +116,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
       if (!mounted) return;
       setState(() {
         isLoading = false;
-        errorMessage = 'Gagal memuat data analisis. Cek koneksi internet.';
+        errorMessage = 'Failed to load analysis data. Check internet connection.'; // Translated
       });
     }
   }
@@ -133,7 +133,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     if (topGainers.isEmpty && topLosers.isEmpty) return;
 
     Map<String, dynamic> preds = {};
-    // Fokus pada mata uang populer
+    // Focus on popular currencies
     final List<String> mainCurrencies = ['USD', 'EUR', 'JPY', 'SGD', 'MYR'];
     final allProcessed = [...topGainers, ...topLosers];
 
@@ -147,19 +147,19 @@ class _AnalysisPageState extends State<AnalysisPage> {
         if (found.isNotEmpty) change = _parseChange(found['change']);
       } catch (_) {}
 
-      // Logic sederhana untuk menentukan "Outlook"
+      // Simple Logic for "Outlook"
       String signal = 'NEUTRAL';
-      String text = 'Pergerakan stabil, volatilitas rendah.';
+      String text = 'Stable movement, low volatility.'; // Translated
       Color color = Colors.grey;
 
       if (change > 0.3) {
-        signal = 'BULLISH'; // Naik
+        signal = 'BULLISH'; // Up
         text =
-            'Tren penguatan terdeteksi. Potensi kenaikan berlanjut dalam jangka pendek.';
+            'Strengthening trend detected. Potential for continued rise in short term.'; // Translated
         color = greenAccentColor;
       } else if (change < -0.3) {
-        signal = 'BEARISH'; // Turun
-        text = 'Tekanan jual cukup tinggi. Waspadai penurunan lebih lanjut.';
+        signal = 'BEARISH'; // Down
+        text = 'Selling pressure is high. Watch for further decline.'; // Translated
         color = redAccentColor;
       }
 
@@ -187,12 +187,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               pinned: true,
               backgroundColor: primaryColor,
               elevation: 0,
-
-              // --- PERUBAHAN DI SINI ---
-              // Mengubah warna tombol back menjadi putih
               iconTheme: const IconThemeData(color: Colors.white),
-
-              // -------------------------
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: BoxDecoration(
@@ -278,10 +273,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     const SizedBox(height: 12),
                     _buildTopPerformersSection(),
                     const SizedBox(height: 24),
-                    // JUDUL DIGANTI agar tidak "AI Prediction"
                     _buildSectionHeader('Market Outlook', Icons.radar_rounded),
                     const SizedBox(height: 12),
-                    _buildForecastSection(), // Layout Baru
+                    _buildForecastSection(),
                     const SizedBox(height: 24),
                     _buildDisclaimer(),
                   ],
@@ -303,7 +297,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           ElevatedButton.icon(
             onPressed: _loadAnalysisData,
             icon: const Icon(Icons.refresh),
-            label: const Text('Coba Lagi'),
+            label: const Text('Try Again'), // Translated
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
@@ -387,7 +381,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   Widget _buildTopPerformersSection() {
     if (topGainers.isEmpty && topLosers.isEmpty) {
-      return const Center(child: Text('Data belum tersedia'));
+      return const Center(child: Text('Data not available')); // Translated
     }
 
     return Column(
@@ -493,7 +487,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   // ==========================================
-  // WIDGET: FORECAST CARD (DESAIN BARU)
+  // WIDGET: FORECAST CARD
   // ==========================================
   Widget _buildForecastSection() {
     if (predictions.isEmpty) return const SizedBox();
@@ -521,7 +515,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           child: IntrinsicHeight(
             child: Row(
               children: [
-                // Indikator Warna di Kiri (Strip)
+                // Color Indicator on Left (Strip)
                 Container(
                   width: 6,
                   decoration: BoxDecoration(
@@ -643,7 +637,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Disclaimer: Analisis ini dihasilkan berdasarkan data pergerakan 24 jam terakhir. Selalu lakukan riset mendalam sebelum mengambil keputusan finansial.',
+              'Disclaimer: This analysis is based on last 24-hour movement data. Always conduct thorough research before making financial decisions.', // Translated
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.grey[600],

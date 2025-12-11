@@ -6,9 +6,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:ui'; // Untuk BackdropFilter
+import 'dart:ui'; // For BackdropFilter
 
-// Import file-file projectmu
+// Import your project files
 import '../repositories/currency_repository.dart';
 import '../services/exchange_rate_service.dart';
 import '../widget/all_rates.dart';
@@ -124,20 +124,20 @@ class _DashboardPageState extends State<DashboardPage> {
       List<FlSpot> spots = [];
       List<String> dates = [];
 
-      // Loop 4 hari terakhir (H-3 sampai Hari H)
+      // Loop last 4 days (D-3 to D-Day)
       for (int i = 3; i >= 0; i--) {
         final targetDate = now.subtract(Duration(days: i));
 
-        // Panggil Service
+        // Call Service
         final historicalRates = await ExchangeRateService.fetchHistoricalRates(
           baseCurrency: 'USD',
           daysAgo: i,
         );
 
-        // Validasi: Jika data kosong / IDR tidak ada, lempar error
-        // agar masuk ke catch dan menampilkan pesan error (bukan data palsu)
+        // Validation: If data empty / IDR missing, throw error
+        // to catch block and show honest error message (not fake data)
         if (historicalRates.isEmpty || !historicalRates.containsKey('IDR')) {
-          throw Exception('Data historis tidak tersedia');
+          throw Exception('Historical data unavailable');
         }
 
         final idrRate = historicalRates['IDR']!;
@@ -162,9 +162,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
       setState(() {
         isChartLoading = false;
-        // Tampilkan pesan error jujur
-        chartErrorMessage = 'Data grafik tidak tersedia saat ini.';
-        chartData = []; // Kosongkan data agar UI menampilkan pesan error
+        // Show honest error message
+        chartErrorMessage = 'Chart data is currently unavailable.';
+        chartData = []; // Clear data so UI shows error message
       });
     }
   }
@@ -202,11 +202,11 @@ class _DashboardPageState extends State<DashboardPage> {
     String emoji;
 
     if (difference > 0) {
-      // Harga NAIK (15k -> 16k) = Rupiah MELEMAH
+      // Price UP (15k -> 16k) = Rupiah WEAKENED
       direction = 'weakened';
       emoji = '📉';
     } else if (difference < 0) {
-      // Harga TURUN (16k -> 15k) = Rupiah MENGUAT
+      // Price DOWN (16k -> 15k) = Rupiah STRENGTHENED
       direction = 'strengthened';
       emoji = '📈';
     } else {
@@ -229,17 +229,17 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F8E9),
-      // 1. REFRESH INDICATOR MEMBUNGKUS BODY UTAMA
+      // 1. REFRESH INDICATOR WRAPS MAIN BODY
       body: RefreshIndicator(
         onRefresh: _refreshAll,
         color: const Color(0xFF2E7D32),
         backgroundColor: Colors.white,
         displacement: 60,
-        edgeOffset: 120, // Agar muncul di bawah AppBar yang expanded
+        edgeOffset: 120, // To appear below expanded AppBar
 
         child: CustomScrollView(
           controller: _scrollController,
-          // 2. PHYSICS AGAR BISA DITARIK MESKI KONTEN SEDIKIT
+          // 2. PHYSICS TO ALLOW PULL EVEN WITH LITTLE CONTENT
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
@@ -415,7 +415,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Lats 3 Days Trend',
+                    'Last 3 Days Trend', // Fixed Typo: "Lats" -> "Last"
                     style: TextStyle(
                       fontSize: 13,
                       color: Color(0xFF8E8E93),
@@ -449,7 +449,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           const SizedBox(height: 24),
 
-          // --- LOGIKA TAMPILAN GRAFIK ---
+          // --- CHART DISPLAY LOGIC ---
           SizedBox(
             height: 200,
             child: isChartLoading
@@ -473,7 +473,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         Text(
                           chartErrorMessage.isNotEmpty
                               ? chartErrorMessage
-                              : 'Data tidak tersedia',
+                              : 'Data unavailable',
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 12,
@@ -482,7 +482,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         TextButton(
                           onPressed: _fetchHistoricalData,
                           child: const Text(
-                            'Coba Lagi',
+                            'Try Again',
                             style: TextStyle(color: Color(0xFF2E7D32)),
                           ),
                         ),
@@ -494,7 +494,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           const SizedBox(height: 16),
 
-          // --- TOMBOL MENUJU ANALYSIS PAGE ---
+          // --- BUTTON TO ANALYSIS PAGE ---
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -519,10 +519,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     Expanded(
                       child: Text(
                         isChartLoading
-                            ? 'Menganalisis data pasar...'
+                            ? 'Analyzing market data...'
                             : chartData.isNotEmpty
                             ? _getChartInsight()
-                            : 'Analisis pasar belum tersedia',
+                            : 'Market analysis unavailable',
                         style: const TextStyle(
                           color: Color(0xFF1C1C1E),
                           fontSize: 13,

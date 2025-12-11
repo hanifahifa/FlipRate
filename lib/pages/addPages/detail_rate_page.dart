@@ -3,21 +3,21 @@ import 'package:intl/intl.dart';
 import '../../utils/favorite_manager.dart';
 
 // =========================================================
-// 🎨 PENGATURAN WARNA (Ganti kode hex di sini)
+// 🎨 COLOR SETTINGS (Change hex code here)
 // =========================================================
 class AppColors {
-  // Warna Utama (Primary) - Ubah ini untuk ganti tema aplikasi
-  static const Color primary = Color(0xFF043915); // 👈 UBAH DI SINI!
+  // Primary Color - Change this to change app theme
+  static const Color primary = Color(0xFF043915); // 👈 CHANGE HERE!
 
-  // Warna Background Halaman
+  // Page Background Color
   static const Color background = Color(0xFFF1F8E9);
 
-  // Warna Teks & Icon
+  // Text & Icon Colors
   static const Color white = Colors.white;
   static const Color blackText = Colors.black87;
   static const Color greyText = Colors.grey;
 
-  // Warna Status
+  // Status Colors
   static const Color success = Colors.green;
   static const Color error = Colors.red;
   static const Color warning = Colors.amber;
@@ -68,8 +68,8 @@ class _DetailRatePageState extends State<DetailRatePage> {
         SnackBar(
           content: Text(
             isFavorite
-                ? '✅ $currency ditambahkan ke favorit'
-                : '❌ $currency dihapus dari favorit',
+                ? '✅ $currency added to favorites' // Translated
+                : '❌ $currency removed from favorites', // Translated
           ),
           duration: const Duration(seconds: 2),
           backgroundColor: isFavorite ? AppColors.success : AppColors.error,
@@ -94,7 +94,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
     final isUp = change.toString().startsWith('+');
 
     return Scaffold(
-      backgroundColor: AppColors.background, // Pakai warna dari AppColors
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           '$currency Details',
@@ -104,7 +104,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
             color: AppColors.white,
           ),
         ),
-        backgroundColor: AppColors.primary, // Pakai warna dari AppColors
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
@@ -129,7 +129,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
                 fontFamily: 'Poppins',
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primary, // Pakai warna dari AppColors
+                color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 4),
@@ -159,22 +159,25 @@ class _DetailRatePageState extends State<DetailRatePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _infoRow(
-                      '💰 Nilai Saat Ini',
+                      '💰 Current Value', // Translated
                       'Rp${NumberFormat('#,###.##').format(rate)}',
                     ),
                     const Divider(),
                     _infoRow(
-                      '📉 Perubahan',
+                      '📉 Change', // Translated
                       change,
                       valueColor: isUp ? AppColors.success : AppColors.error,
                     ),
                     const Divider(),
-                    _infoRow('🌍 Negara', _getCountryName(currency)),
+                    _infoRow(
+                      '🌍 Country',
+                      _getCountryName(currency),
+                    ), // Translated
                     const Divider(),
-                    _infoRow('🔤 Kode Mata Uang', currency),
+                    _infoRow('🔤 Currency Code', currency), // Translated
                     const Divider(),
                     _infoRow(
-                      '🕒 Terakhir Diperbarui',
+                      '🕒 Last Updated', // Translated
                       DateFormat('d MMM yyyy, HH:mm').format(DateTime.now()),
                     ),
                   ],
@@ -184,7 +187,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
 
             const SizedBox(height: 20),
 
-            // Tombol Add/Remove Favorite
+            // Button Add/Remove Favorite
             if (!isLoading)
               SizedBox(
                 width: double.infinity,
@@ -192,7 +195,9 @@ class _DetailRatePageState extends State<DetailRatePage> {
                   onPressed: _toggleFavorite,
                   icon: Icon(isFavorite ? Icons.star : Icons.star_border),
                   label: Text(
-                    isFavorite ? 'Hapus dari Favorit' : 'Tambah ke Favorit',
+                    isFavorite
+                        ? 'Remove from Favorites'
+                        : 'Add to Favorites', // Translated
                     style: const TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w600,
@@ -201,8 +206,8 @@ class _DetailRatePageState extends State<DetailRatePage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isFavorite
                         ? AppColors
-                              .disabled // Abu-abu jika sudah favorit
-                        : AppColors.primary, // Hijau (Primary) jika belum
+                              .disabled // Grey if favorite
+                        : AppColors.primary, // Green if not
                     foregroundColor: AppColors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -243,7 +248,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
                 fontFamily: 'Poppins',
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: valueColor ?? AppColors.primary, // Default ke Primary
+                color: valueColor ?? AppColors.primary, // Default to Primary
               ),
             ),
           ),
@@ -253,23 +258,24 @@ class _DetailRatePageState extends State<DetailRatePage> {
   }
 
   String _getCountryName(String code) {
+    // Translated Country Names
     const countries = {
-      'USD': 'Amerika Serikat',
-      'EUR': 'Eropa',
-      'JPY': 'Jepang',
-      'GBP': 'Inggris',
-      'SGD': 'Singapura',
+      'USD': 'United States',
+      'EUR': 'Eurozone',
+      'JPY': 'Japan',
+      'GBP': 'United Kingdom',
+      'SGD': 'Singapore',
       'AUD': 'Australia',
       'CNY': 'China',
       'MYR': 'Malaysia',
       'THB': 'Thailand',
-      'KRW': 'Korea Selatan',
+      'KRW': 'South Korea',
       'INR': 'India',
-      'CHF': 'Swiss',
-      'CAD': 'Kanada',
-      'NZD': 'Selandia Baru',
-      'PHP': 'Filipina',
+      'CHF': 'Switzerland',
+      'CAD': 'Canada',
+      'NZD': 'New Zealand',
+      'PHP': 'Philippines',
     };
-    return countries[code] ?? 'Tidak diketahui';
+    return countries[code] ?? 'Unknown'; // Translated fallback
   }
 }
