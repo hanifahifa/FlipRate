@@ -12,7 +12,7 @@ import '../utils/history_manager.dart';
 // APP COLORS - Ubah warna primary di sini untuk ganti semua tema!
 // =====================================================
 class AppColors {
-  static const Color primary = Color(0xFF043915);        // 👈 UBAH DI SINI!
+  static const Color primary = Color(0xFF043915); // 👈 UBAH DI SINI!
   static const Color primaryLight = Color(0xFF2E7D32);
   static const Color background = Color(0xFFF1F8E9);
   static const Color backgroundWhite = Colors.white;
@@ -58,6 +58,7 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
 
     try {
       final rates = await CurrencyRepository.getAllRates();
+      if (!mounted) return;
       if (mounted) {
         setState(() {
           allRates = rates;
@@ -66,13 +67,13 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-          errorMessage = 'Gagal memuat data. Periksa koneksi internet Anda.';
-        });
-        print("Error di AllRates: $e");
-      }
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Gagal memuat data. Periksa koneksi internet Anda.';
+      });
+      print("Error di AllRates: $e");
     }
   }
 
@@ -134,7 +135,9 @@ class _AllRatesWidgetState extends State<AllRatesWidget> {
             Expanded(
               child: isLoading
                   ? Center(
-                      child: CircularProgressIndicator(color: AppColors.primary),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
                     )
                   : errorMessage.isNotEmpty
                   ? Center(

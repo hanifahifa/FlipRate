@@ -77,6 +77,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final rates = await CurrencyRepository.getPopularRates(
         currencies: popularCurrencies,
       );
+      if (!mounted) return;
 
       setState(() {
         popularRates = rates.map((rate) {
@@ -93,6 +94,7 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     } catch (e) {
       print('❌ Dashboard Error: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
         errorMessage = 'Unable to fetch rates.';
@@ -135,6 +137,7 @@ class _DashboardPageState extends State<DashboardPage> {
           dates.add(DateFormat('d MMM').format(targetDate));
         }
       }
+      if (!mounted) return;
 
       setState(() {
         chartData = spots;
@@ -143,6 +146,7 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     } catch (e) {
       print('❌ Dashboard Chart Error: $e');
+      if (!mounted) return;
       setState(() {
         isChartLoading = false;
         chartErrorMessage = 'Chart data unavailable';

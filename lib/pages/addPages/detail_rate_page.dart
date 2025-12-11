@@ -2,6 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../utils/favorite_manager.dart';
 
+// =========================================================
+// 🎨 PENGATURAN WARNA (Ganti kode hex di sini)
+// =========================================================
+class AppColors {
+  // Warna Utama (Primary) - Ubah ini untuk ganti tema aplikasi
+  static const Color primary = Color(0xFF043915); // 👈 UBAH DI SINI!
+
+  // Warna Background Halaman
+  static const Color background = Color(0xFFF1F8E9);
+
+  // Warna Teks & Icon
+  static const Color white = Colors.white;
+  static const Color blackText = Colors.black87;
+  static const Color greyText = Colors.grey;
+
+  // Warna Status
+  static const Color success = Colors.green;
+  static const Color error = Colors.red;
+  static const Color warning = Colors.amber;
+  static const Color disabled = Colors.grey;
+}
+// =========================================================
+
 class DetailRatePage extends StatefulWidget {
   final Map<String, dynamic> rateData;
 
@@ -39,6 +62,8 @@ class _DetailRatePageState extends State<DetailRatePage> {
         isFavorite = !isFavorite;
       });
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -47,7 +72,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
                 : '❌ $currency dihapus dari favorit',
           ),
           duration: const Duration(seconds: 2),
-          backgroundColor: isFavorite ? Colors.green : Colors.red,
+          backgroundColor: isFavorite ? AppColors.success : AppColors.error,
         ),
       );
     }
@@ -69,33 +94,22 @@ class _DetailRatePageState extends State<DetailRatePage> {
     final isUp = change.toString().startsWith('+');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F8E9),
+      backgroundColor: AppColors.background, // Pakai warna dari AppColors
       appBar: AppBar(
         title: Text(
           '$currency Details',
           style: const TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: AppColors.white,
           ),
         ),
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: AppColors.primary, // Pakai warna dari AppColors
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          // Tombol favorite di AppBar
-          if (!isLoading)
-            IconButton(
-              icon: Icon(
-                isFavorite ? Icons.star : Icons.star_border,
-                color: isFavorite ? Colors.amber : Colors.white,
-              ),
-              onPressed: _toggleFavorite,
-            ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -105,7 +119,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
             const SizedBox(height: 20),
             CircleAvatar(
               radius: 45,
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.white,
               child: Text(flag, style: const TextStyle(fontSize: 40)),
             ),
             const SizedBox(height: 16),
@@ -115,23 +129,23 @@ class _DetailRatePageState extends State<DetailRatePage> {
                 fontFamily: 'Poppins',
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF2E7D32),
+                color: AppColors.primary, // Pakai warna dari AppColors
               ),
             ),
             const SizedBox(height: 4),
             Text(
               currency,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: AppColors.greyText,
               ),
             ),
             const SizedBox(height: 24),
 
             // Card Info
             Card(
-              color: Colors.white,
+              color: AppColors.white,
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -152,7 +166,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
                     _infoRow(
                       '📉 Perubahan',
                       change,
-                      valueColor: isUp ? Colors.green : Colors.red,
+                      valueColor: isUp ? AppColors.success : AppColors.error,
                     ),
                     const Divider(),
                     _infoRow('🌍 Negara', _getCountryName(currency)),
@@ -170,7 +184,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
 
             const SizedBox(height: 20),
 
-            // Tombol Add/Remove Favorite (Alternatif di bawah card)
+            // Tombol Add/Remove Favorite
             if (!isLoading)
               SizedBox(
                 width: double.infinity,
@@ -186,9 +200,10 @@ class _DetailRatePageState extends State<DetailRatePage> {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isFavorite
-                        ? Colors.grey[400]
-                        : const Color(0xFF2E7D32),
-                    foregroundColor: Colors.white,
+                        ? AppColors
+                              .disabled // Abu-abu jika sudah favorit
+                        : AppColors.primary, // Hijau (Primary) jika belum
+                    foregroundColor: AppColors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -215,7 +230,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
               style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 14,
-                color: Colors.black87,
+                color: AppColors.blackText,
               ),
             ),
           ),
@@ -228,7 +243,7 @@ class _DetailRatePageState extends State<DetailRatePage> {
                 fontFamily: 'Poppins',
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: valueColor ?? const Color(0xFF2E7D32),
+                color: valueColor ?? AppColors.primary, // Default ke Primary
               ),
             ),
           ),

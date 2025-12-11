@@ -89,6 +89,7 @@ class _ConvertPageState extends State<ConvertPage> {
           toCode: toCurrency,
         );
       } catch (e) {}
+      if (!mounted) return;
 
       setState(() {
         convertedValue = result;
@@ -119,6 +120,7 @@ class _ConvertPageState extends State<ConvertPage> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
         errorMessage = 'Failed to convert. Please try again.';

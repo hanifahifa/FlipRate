@@ -105,21 +105,19 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
       final topLosersList = losers.take(5).toList();
 
-      if (mounted) {
-        setState(() {
-          topGainers = gainers;
-          topLosers = topLosersList;
-          isLoading = false;
-        });
-        _calculatePredictions();
-      }
+      if (!mounted) return;
+      setState(() {
+        topGainers = gainers;
+        topLosers = topLosersList;
+        isLoading = false;
+      });
+      _calculatePredictions();
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-          errorMessage = 'Gagal memuat data analisis. Cek koneksi internet.';
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Gagal memuat data analisis. Cek koneksi internet.';
+      });
     }
   }
 
@@ -189,12 +187,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
               pinned: true,
               backgroundColor: primaryColor,
               elevation: 0,
-              
+
               // --- PERUBAHAN DI SINI ---
               // Mengubah warna tombol back menjadi putih
-              iconTheme: const IconThemeData(color: Colors.white), 
-              // -------------------------
+              iconTheme: const IconThemeData(color: Colors.white),
 
+              // -------------------------
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: BoxDecoration(
