@@ -56,6 +56,31 @@ lib/
 - **Material Design 3** → Tampilan UI modern dan konsisten
 
 ---
+
+## 🔌 API & Data Sources
+
+Aplikasi ini menerapkan strategi **Client-Side Fallback** untuk memastikan pengguna tetap mendapatkan data kurs terkini meskipun salah satu penyedia layanan mengalami gangguan.
+
+### 🛡️ Mekanisme API Redundancy
+Untuk pengambilan data kurs terkini (*Current Rates*), aplikasi menggunakan **3 Endpoints** secara berurutan. Jika endpoint utama gagal merespons (timeout/error), aplikasi akan otomatis mencoba endpoint cadangan:
+
+1.  **Primary:** `api.exchangerate-api.com` (Stabil & Cepat)
+2.  **Backup 1:** `open.er-api.com` (Digunakan jika Primary down)
+3.  **Backup 2:** `api.frankfurter.app` (Cadangan terakhir)
+
+### 📊 Historical Data Source
+Untuk fitur grafik tren (*Chart*), aplikasi mengambil data historis menggunakan:
+* **Frankfurter API** (`api.frankfurter.app`) - Mengambil data H-3 untuk analisis tren pasar.
+
+### 🔄 Alur Kerja (Logic)
+Setiap kali melakukan *Refresh* atau *Konversi*:
+1.  Sistem melakukan *looping request* ke daftar URL di atas.
+2.  Jika request ke-1 sukses (HTTP 200), data langsung ditampilkan.
+3.  Jika gagal, sistem menangkap *Exception* dan melanjutkan ke URL berikutnya dalam daftar.
+4.  Data respon dinormalisasi melalui model `ExchangeRateResponse` agar kompatibel dengan UI aplikasi.
+
+---
+
 ## ⚙️ Cara Menjalankan Aplikasi
 
 Ikuti langkah-langkah berikut untuk menjalankan proyek ini di mesin lokal Anda (pastikan berada di branch `uas`):
@@ -63,7 +88,7 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di mesin lokal Anda (
 1. **Pastikan Flutter SDK sudah terpasang.**
 2. Clone repositori ini:
    ```bash
-   git clone [https://github.com/hanifahifa/FlipRate](https://github.com/hanifahifa/FlipRate)
+   git clone https://github.com/hanifahifa/FlipRate
 
 3. Masuk ke direktori proyek:
    ```Bash
@@ -115,17 +140,28 @@ Fitur-fitur berikut direncanakan untuk pengembangan di masa depan (Versi 2.0):
 
   ---
 ## 📱 Tampilan Aplikasi
-![Screenshot_2025-12-11-15-59-40-19_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/6e7d1eb8-5d01-492a-a217-c78977d72783)
-![Screenshot_2025-12-11-15-59-46-20_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/3a76d05e-a040-4f4e-bdbe-bb25dda917d5)
-![Screenshot_2025-12-11-15-59-43-02_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/395fb393-f126-41da-bf37-1a75af803e72)
-![Screenshot_2025-12-11-15-58-44-43_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/422f4d1f-b43c-41bb-8c65-98c31c911fbe)
-![Screenshot_2025-12-11-15-58-52-99_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/280f148e-a6cc-425f-9449-fc2de730a65a)
-![Screenshot_2025-12-11-15-58-56-72_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/da0d5fe1-dae4-46a8-8cc3-d4b995aaccb3)
-![Screenshot_2025-12-11-15-59-28-90_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/ffa9cd51-ad3a-4296-8aa8-bf1443ec41f6)
-![Screenshot_2025-12-11-15-59-18-42_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/04fc019b-7170-4fe3-bfc3-c076214d75e1)
-![Screenshot_2025-12-11-15-59-10-00_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/89d4a405-da07-468e-95c4-1cd2b9f7ad79)
-![Screenshot_2025-12-11-15-59-05-63_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/beb21d07-d23b-404a-90d7-d96807c557a0)
-![Screenshot_2025-12-11-15-58-59-64_cfc59e53ef3a746a150a639154ce5d2a](https://github.com/user-attachments/assets/2efd05d5-cb66-45f9-8406-9af2bad05b1f)
+🔐 Login Page
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/6e7d1eb8-5d01-492a-a217-c78977d72783" width="250" />
+  <img src="https://github.com/user-attachments/assets/3a76d05e-a040-4f4e-bdbe-bb25dda917d5" width="250" />
+  <img src="https://github.com/user-attachments/assets/395fb393-f126-41da-bf37-1a75af803e72" width="250" />
+</p>
+
+📊 Dashboard
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/422f4d1f-b43c-41bb-8c65-98c31c911fbe" width="250" />
+  <img src="https://github.com/user-attachments/assets/b77db70a-c6f8-47c8-aca5-c376eb870038" width="250" />
+  <img src="https://github.com/user-attachments/assets/da0d5fe1-dae4-46a8-8cc3-d4b995aaccb3" width="250" />
+  <img src="https://github.com/user-attachments/assets/f9d53dfe-818b-4bf1-b0b8-45774b20e35c" width="250" />
+</p>
+
+🧩 Widgets
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/beb21d07-d23b-404a-90d7-d96807c557a0" width="250" />
+  <img src="https://github.com/user-attachments/assets/04fc019b-7170-4fe3-bfc3-c076214d75e1" width="250" />
+  <img src="https://github.com/user-attachments/assets/ffa9cd51-ad3a-4296-8aa8-bf1443ec41f6" width="250" />
+  <img src="https://github.com/user-attachments/assets/89d4a405-da07-468e-95c4-1cd2b9f7ad79" width="250" />
+</p>
 
 
 
